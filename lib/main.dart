@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:yh/ui/screens/main_screen.dart';
-import 'package:yh/ui/screens/payment_detail_screen.dart';
-import 'package:yh/ui/screens/profile_completion_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'ui/screens/splash_screen.dart';
 
-void main() {
+void main() async {
+  // Bắt buộc phải gọi hàm này trước khi dùng các plugin native (Firebase, SQLite...)
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    // Khởi tạo Firebase với options
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint("✅ Đã kết nối thành công với Firebase!");
+  } catch (e) {
+    debugPrint("❌ Lỗi kết nối Firebase: $e");
+    // Bạn vẫn có thể chạy app bằng cách bắt lỗi này nếu cần
+  }
+
   runApp(const MyApp());
 }
 
@@ -18,7 +31,7 @@ class MyApp extends StatelessWidget {
       title: 'Young House',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const MainScreen(), // Đặt SplashScreen làm trang bắt đầu
+      home: const SplashScreen(),
     );
   }
 }

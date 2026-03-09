@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "748077190191",
+    "project_id": "young-house-74cf4",
+    "storage_bucket": "young-house-74cf4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:748077190191:android:c59001e2511edd7b9b4ada",
+        "android_client_info": {
+          "package_name": "com.younghouse.yh"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkMTHX2abgUo7i_CZPWpB8LwubcRrISL0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
