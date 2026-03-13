@@ -1,6 +1,6 @@
 plugins {
     id "com.android.application"
-    id "kotlin-android"
+    id "org.jetbrains.kotlin.android"
     id "dev.flutter.flutter-gradle-plugin"
     id 'com.google.gms.google-services'
 }
@@ -25,7 +25,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.younghouse.yh"
-    compileSdkVersion 34
+    compileSdk 36
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -46,8 +46,8 @@ android {
         applicationId "com.younghouse.yh"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion 21  // Firebase yêu cầu tối thiểu API 21
-        targetSdkVersion 34
+        minSdk flutter.minSdkVersion  // Firebase requires at least API 21
+        targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
         multiDexEnabled true
@@ -66,4 +66,7 @@ flutter {
     source '../..'
 }
 
-dependencies {}
+dependencies {
+    implementation "androidx.multidex:multidex:2.0.1"
+}
+
