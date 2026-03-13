@@ -108,20 +108,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text("Chưa có tài khoản?"),
-                      TextButton(
-                        onPressed: () {},
-                        child: const Text(
-                          "Đăng ký ngay",
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
