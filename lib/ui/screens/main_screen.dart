@@ -3,6 +3,7 @@ import '../../core/theme/app_colors.dart';
 import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
 import 'chat_support_screen.dart';
+import 'notification_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -24,7 +25,7 @@ class _MainScreenState extends State<MainScreen> {
       // Có thể dùng chung giao diện Chat hoặc trang riêng
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const ChatSupportScreen()),
+        MaterialPageRoute(builder: (context) => const NotificationScreen()),
       );
     }
   }
@@ -158,63 +159,6 @@ class _MainScreenState extends State<MainScreen> {
                 },
               ),
             ),
-
-            const Padding(
-              padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
-              child: Text(
-                "Tin tức mới nhất",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ),
-
-            // News Placeholder
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.campaign, color: AppColors.primary, size: 40),
-                      ),
-                      const SizedBox(width: 16),
-                      const Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Thông báo bảo trì định kỳ",
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              "Hệ thống điện sẽ được kiểm tra vào ngày 25/03...",
-                              style: TextStyle(color: Colors.grey, fontSize: 14),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
           ],
         ),
       ),
