@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/notification_provider.dart';
-import 'payment_history_screen.dart';
-import 'payment_detail_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
+import 'payment_detail_screen.dart';
+import 'payment_history_screen.dart';
+import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String userId;
@@ -14,9 +15,9 @@ class MainScreen extends StatefulWidget {
 
   const MainScreen({
     super.key,
-    this.userId = 'user_001', // TODO: thay bằng userId thực từ Firebase Auth
-    this.userName = 'Nguyễn Văn A',
-    this.roomInfo = 'Phòng 302 - Nhà Young House 1',
+    required this.userId,
+    this.userName = 'Người dùng',
+    this.roomInfo = '',
   });
 
   @override
@@ -59,6 +60,10 @@ class _MainScreenState extends State<MainScreen> {
     } else if (index == 2) {
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()));
+    } else if (index == 3) {
+      Navigator.push(context,
+          MaterialPageRoute(
+              builder: (_) => ProfileScreen(userId: widget.userId)));
     }
   }
 
@@ -95,7 +100,12 @@ class _MainScreenState extends State<MainScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ProfileScreen(userId: widget.userId),
+              ),
+            ),
             icon: const Icon(Icons.person_outline),
           ),
         ],

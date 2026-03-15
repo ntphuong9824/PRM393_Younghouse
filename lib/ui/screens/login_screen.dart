@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import 'profile_completion_screen.dart';
-import 'admin_send_notification_screen.dart';
+import '../../services/auth_service.dart';
+import 'main_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,24 +15,68 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AuthService();
+  bool _isLoading = false;
 
-  void _login() {
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
     final phone = _phoneController.text.trim();
-    // Nếu đăng nhập với số admin (0000) thì vào màn hình admin
-    if (phone == '0000') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const AdminSendNotificationScreen(),
-        ),
-      );
+    final password = _passwordController.text;
+
+    if (phone.isEmpty || password.isEmpty) {
+      _showError('Vui lòng nhập số điện thoại và mật khẩu.');
       return;
     }
-    // Người thuê -> hoàn thiện hồ sơ
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const ProfileCompletionScreen()),
+
+    setState(() => _isLoading = true);
+
+    try {
+      final user = await _authService.loginWithPhone(phone, password);
+      if (!mounted) return;
+
+      if (user != null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MainScreen(userId: user.uid),
+          ),
+        );
+      }
+    } on FirebaseAuthException catch (e) {
+      _showError(_mapAuthError(e.code));
+    } catch (e) {
+      _showError(e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
     );
+  }
+
+  String _mapAuthError(String code) {
+    switch (code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Mật khẩu không đúng.';
+      case 'user-not-found':
+        return 'Tài khoản không tồn tại.';
+      case 'user-disabled':
+        return 'Tài khoản đã bị vô hiệu hóa.';
+      case 'too-many-requests':
+        return 'Quá nhiều lần thử. Vui lòng thử lại sau.';
+      default:
+        return 'Đăng nhập thất bại. Vui lòng thử lại.';
+    }
   }
 
   @override
@@ -86,7 +132,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _phoneController,
                     decoration: InputDecoration(
                       labelText: "Số điện thoại",
-                      hintText: "Nhập 0000 để vào trang admin",
                       prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -107,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
                   ElevatedButton(
-                    onPressed: _login,
+                    onPressed: _isLoading ? null : _login,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppColors.primary,
@@ -115,10 +160,44 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      "ĐĂNG NHẬP",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Text(
+                            "ĐĂNG NHẬP",
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white),
+                          ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text('Chưa có tài khoản? ',
+                          style: TextStyle(color: Colors.grey)),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const RegisterScreen()),
+                        ),
+                        child: const Text(
+                          'Đăng ký',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

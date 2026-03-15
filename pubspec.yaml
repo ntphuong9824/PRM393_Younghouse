@@ -24,6 +24,8 @@ dependencies:
   url_launcher: ^6.1.14
   url_launcher_android: ^6.3.28
   crypto: ^3.0.3
+  image_picker: ^1.0.7
+  firebase_storage: ^11.6.0
 
 dev_dependencies:
   flutter_test:
