@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
-import '../../services/notification_service.dart';
 
 class AdminSendNotificationScreen extends StatefulWidget {
   const AdminSendNotificationScreen({super.key});

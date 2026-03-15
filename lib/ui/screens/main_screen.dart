@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/notification_provider.dart';
 import 'payment_history_screen.dart';
-import 'payment_detail_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 
@@ -39,8 +38,8 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onFeatureTap(String title) {
     if (title == 'Thanh toán') {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const PaymentDetailScreen()));
+      // TODO: load invoice từ SQLite rồi truyền vào
+      // Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(invoice: invoice)));
     } else if (title == 'Thông báo') {
       Navigator.push(
         context,
@@ -57,8 +56,12 @@ class _MainScreenState extends State<MainScreen> {
       Navigator.push(context,
           MaterialPageRoute(builder: (_) => const ChatSupportScreen()));
     } else if (index == 2) {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaymentHistoryScreen(tenantId: widget.userId),
+        ),
+      );
     }
   }
 

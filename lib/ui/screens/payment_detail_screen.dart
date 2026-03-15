@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../models/room_model.dart';
-import '../../models/invoice_model.dart';
 import 'package:intl/intl.dart';
+import '../../core/theme/app_colors.dart';
+import '../../models/invoice_model.dart';
 import '../../services/payos_service.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
-  const PaymentDetailScreen({super.key});
+  final InvoiceModel invoice;
+  const PaymentDetailScreen({super.key, required this.invoice});
 
   @override
   State<PaymentDetailScreen> createState() => _PaymentDetailScreenState();
@@ -16,63 +16,36 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   final PayosService _payosService = PayosService();
   bool _isLoading = false;
 
-  // Dữ liệu giả định (Sau này sẽ lấy từ API/Admin set)
-  final room = RoomModel(
-    roomId: "R302",
-    roomName: "Phòng 302",
-    baseRent: 1800000,
-    waterServicePerPerson: 100000,
-    numberOfPeople: 2,
-    electricityPricePerUnit: 3000,
-  );
-
-  late final invoice = InvoiceModel(
-    id: "INV-2024-03",
-    room: room,
-    month: DateTime(2024, 3),
-    electricityStart: 1250,
-    electricityEnd: 1345,
-    isPaid: false,
-  );
-
   Future<void> _handlePayment() async {
-    setState(() {
-      _isLoading = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
-      // PayOS yêu cầu orderCode là số nguyên (int)
-      // Ở đây tạm lấy timestamp để demo, thực tế nên lấy từ database
-      int orderCode = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      
       await _payosService.createPaymentLink(
-        orderCode: orderCode,
-        amount: invoice.totalAmount.toInt(),
-        description: "Thanh toan ${invoice.room.roomName} T${invoice.month.month}",
+        orderCode: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        amount: widget.invoice.totalAmount.toInt(),
+        description: "Thanh toan phong T${widget.invoice.month}/${widget.invoice.year}",
       );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Lỗi thanh toán: ${e.toString()}")),
+          SnackBar(content: Text("Lỗi thanh toán: $e")),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+    final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+    final inv = widget.invoice;
+    final isPaid = inv.status == 'paid';
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Chi tiết thanh toán", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Chi tiết thanh toán",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textDark,
         elevation: 0,
@@ -84,24 +57,32 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Month Header
                 Center(
                   child: Column(
                     children: [
                       Text(
-                        "Tháng ${invoice.month.month}/${invoice.month.year}",
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        "Tháng ${inv.month}/${inv.year}",
+                        style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary),
                       ),
                       const SizedBox(height: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.1),
+                          color: isPaid
+                              ? Colors.green.withValues(alpha: 0.1)
+                              : Colors.orange.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text(
-                          "Chưa thanh toán",
-                          style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+                        child: Text(
+                          isPaid ? "Đã thanh toán" : "Chưa thanh toán",
+                          style: TextStyle(
+                              color: isPaid ? Colors.green : Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12),
                         ),
                       ),
                     ],
@@ -112,106 +93,113 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                 // Billing Card
                 Card(
                   elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
                   child: Padding(
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
-                        _buildBillRow("Tiền phòng cố định", currencyFormat.format(room.baseRent)),
+                        _billRow("Tiền phòng", fmt.format(inv.rentAmount)),
                         const Divider(height: 30),
-                        _buildBillRow(
-                          "Nước & Dịch vụ",
-                          currencyFormat.format(room.totalWaterService),
-                          subtitle: "(${room.numberOfPeople} người x ${currencyFormat.format(room.waterServicePerPerson)})",
-                        ),
-                        const Divider(height: 30),
-                        _buildBillRow(
+                        _billRow(
                           "Tiền điện",
-                          currencyFormat.format(invoice.electricityCost),
-                          subtitle: "(${invoice.electricityUsed.toInt()} số x ${currencyFormat.format(room.electricityPricePerUnit)})",
+                          fmt.format(inv.electricCost),
+                          subtitle:
+                              "(${inv.electricUsed} số x ${fmt.format(inv.electricPrice)})\nChỉ số: ${inv.electricPrev} → ${inv.electricCurr}",
                         ),
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            Text(
-                              "Chỉ số: ${invoice.electricityStart.toInt()} -> ${invoice.electricityEnd.toInt()}",
-                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                            ),
-                          ],
-                        ),
+                        if (inv.waterUsed > 0) ...[
+                          const Divider(height: 30),
+                          _billRow(
+                            "Tiền nước",
+                            fmt.format(inv.waterCost),
+                            subtitle:
+                                "(${inv.waterUsed} m³ x ${fmt.format(inv.waterPrice)})\nChỉ số: ${inv.waterPrev} → ${inv.waterCurr}",
+                          ),
+                        ],
+                        if (inv.otherFees > 0) ...[
+                          const Divider(height: 30),
+                          _billRow("Phí khác", fmt.format(inv.otherFees)),
+                        ],
                         const Divider(height: 40, thickness: 1.5),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              "TỔNG CỘNG",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
+                            const Text("TỔNG CỘNG",
+                                style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold)),
                             Text(
-                              currencyFormat.format(invoice.totalAmount),
+                              fmt.format(inv.totalAmount),
                               style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
-                              ),
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary),
                             ),
                           ],
                         ),
+                        if (inv.paidAt != null) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            "Đã thanh toán lúc: ${DateFormat('dd/MM/yyyy HH:mm').format(inv.paidAt!)}",
+                            style: const TextStyle(
+                                fontSize: 12, color: Colors.green),
+                          ),
+                        ],
                       ],
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 30),
-                const Text(
-                  "Hướng dẫn thanh toán",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.blue.withOpacity(0.1)),
-                  ),
-                  child: const Column(
-                    children: [
-                      _buildInfoRow(Icons.account_balance, "Ngân hàng: MB Bank"),
-                      SizedBox(height: 8),
-                      _buildInfoRow(Icons.person, "Chủ TK: YOUNG HOUSE ADMIN"),
-                      SizedBox(height: 8),
-                      _buildInfoRow(Icons.numbers, "STK: 0123456789"),
-                      SizedBox(height: 8),
-                      _buildInfoRow(Icons.info_outline, "Nội dung: P302 T3/2024"),
-                    ],
-                  ),
-                ),
 
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 55,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handlePayment,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                if (inv.notes != null && inv.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.note_outlined,
+                              color: AppColors.primary),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(inv.notes!)),
+                        ],
+                      ),
                     ),
-                    child: _isLoading 
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text("THANH TOÁN NGAY", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
-                ),
+                ],
+
+                if (!isPaid) ...[
+                  const SizedBox(height: 40),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _handlePayment,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white)
+                          : const Text("THANH TOÁN NGAY",
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
               ],
             ),
           ),
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
@@ -219,7 +207,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     );
   }
 
-  Widget _buildBillRow(String title, String amount, {String? subtitle}) {
+  Widget _billRow(String title, String amount, {String? subtitle}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -227,32 +215,21 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500)),
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w500)),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),
-                Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                Text(subtitle,
+                    style: TextStyle(
+                        color: Colors.grey[600], fontSize: 12)),
               ],
             ],
           ),
         ),
-        Text(amount, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-}
-
-class _buildInfoRow extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  const _buildInfoRow(this.icon, this.text);
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.blue),
-        const SizedBox(width: 12),
-        Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        Text(amount,
+            style: const TextStyle(
+                fontSize: 16, fontWeight: FontWeight.bold)),
       ],
     );
   }

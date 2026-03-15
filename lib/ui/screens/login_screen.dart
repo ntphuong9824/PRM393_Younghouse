@@ -16,20 +16,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _login() {
     final phone = _phoneController.text.trim();
-    // Nếu đăng nhập với số admin (0000) thì vào màn hình admin
     if (phone == '0000') {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => const AdminSendNotificationScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const AdminSendNotificationScreen()),
       );
       return;
     }
-    // Người thuê -> hoàn thiện hồ sơ
+    // Tenant → hoàn thiện hồ sơ (dùng phone làm userId tạm)
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const ProfileCompletionScreen()),
+      MaterialPageRoute(
+        builder: (_) => ProfileCompletionScreen(
+          userId: 'user_$phone',
+          phone: phone,
+        ),
+      ),
     );
   }
 

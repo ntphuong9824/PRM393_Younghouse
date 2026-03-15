@@ -21,7 +21,18 @@
 
 ---
 
-## 2. properties (Tòa nhà)
+## 2. guardians (Người giám hộ)
+| Field | Type | Note |
+|-------|------|------|
+| id | String | PK |
+| user_id | String | FK → users.id |
+| full_name | String | Họ tên người giám hộ |
+| phone | String | Số điện thoại |
+| relationship | String | Quan hệ: bố, mẹ, anh, chị... |
+
+---
+
+## 3. properties (Tòa nhà)
 | Field | Type | Note |
 |-------|------|------|
 | id | String | PK |
@@ -34,6 +45,7 @@
 | description | String | Mô tả |
 | total_rooms | Integer | Tổng số phòng |
 | status | String | `active` / `inactive` |
+| images | Array\<String\> | Danh sách URL ảnh tòa nhà (Firebase Storage) |
 | created_at | Timestamp | |
 | updated_at | Timestamp | |
 
@@ -51,8 +63,7 @@
 | area_sqm | Real | Diện tích (m²) |
 | base_price | Real | Giá thuê |
 | deposit_amount | Real | Tiền cọc |
-| description | String | Mô tả |
-| amenities | Array\<String\> | Tiện nghi: điều hòa, nóng lạnh... |
+| description | String | Mô tả (bao gồm tiện nghi: điều hòa, nóng lạnh...) |
 | images | Array\<String\> | Danh sách URL ảnh (Firebase Storage) |
 | status | String | `vacant` / `occupied` / `maintenance` |
 | created_at | Timestamp | |
@@ -65,10 +76,9 @@
 |-------|------|------|
 | id | String | PK |
 | room_id | String | FK → rooms.id |
-| service_name | String | Tên dịch vụ: điện, nước, internet... |
-| unit | String | Đơn vị: kWh, m³, người, tháng |
+| service_name | String | Tên dịch vụ: `electric` / `water` / `internet` / `trash`... |
+| unit | String | Đơn vị: `kWh` (điện theo số), `person` (dịch vụ khác theo đầu người) |
 | price_per_unit | Real | Đơn giá |
-| is_metered | Boolean | Có đồng hồ đo không |
 | created_at | Timestamp | |
 | updated_at | Timestamp | |
 
@@ -83,8 +93,6 @@
 | landlord_id | String | FK → users.id |
 | start_date | Timestamp | Ngày bắt đầu |
 | end_date | Timestamp | Ngày kết thúc |
-| monthly_rent | Real | Giá thuê hàng tháng |
-| deposit | Real | Tiền cọc |
 | co_tenants | Array\<String\> | Danh sách userId ở cùng |
 | terms | String | Điều khoản hợp đồng |
 | status | String | `active` / `expired` / `terminated` |
@@ -109,12 +117,9 @@
 | year | Integer | Năm |
 | electric_prev | Integer | Chỉ số điện đầu kỳ |
 | electric_curr | Integer | Chỉ số điện cuối kỳ |
-| electric_price | Real | Đơn giá điện |
-| water_prev | Integer | Chỉ số nước đầu kỳ |
-| water_curr | Integer | Chỉ số nước cuối kỳ |
-| water_price | Real | Đơn giá nước |
-| rent_amount | Real | Tiền thuê tháng này |
-| other_fees | Real | Phí khác (gửi xe, rác...) |
+| electric_price | Real | Đơn giá điện (lấy từ room_services) |
+| rent_amount | Real | Tiền thuê tháng này (lấy từ rooms.base_price) |
+| other_fees | Real | Phí khác (dịch vụ theo đầu người: nước, internet, rác...) |
 | total_amount | Real | Tổng cộng |
 | status | String | `unpaid` / `paid` / `overdue` |
 | due_date | Timestamp | Hạn thanh toán |
@@ -133,7 +138,7 @@
 | id | String | PK |
 | invoice_id | String | FK → invoices.id |
 | service_name | String | Tên dịch vụ |
-| quantity | Real | Số lượng |
+| quantity | Real | Số lượng (số kWh hoặc số người) |
 | unit_price | Real | Đơn giá |
 | amount | Real | Thành tiền |
 | note | String | |
@@ -156,41 +161,19 @@
 
 ---
 
-## 9. meter_readings (Chỉ số đồng hồ)
+## 9. notifications
 | Field | Type | Note |
 |-------|------|------|
 | id | String | PK |
-| room_id | String | FK → rooms.id |
-| recorded_by | String | FK → users.id |
-| type | String | `electric` / `water` |
-| value | Integer | Chỉ số hiện tại |
-| previous_value | Integer | Chỉ số kỳ trước |
-| image_url | String | Ảnh chụp đồng hồ |
-| note | String | |
-| reading_month | Integer | |
-| reading_year | Integer | |
-| recorded_at | Timestamp | |
+| title | String | Tiêu đề |
+| message | String | Nội dung |
+| createdAt | Timestamp | |
+| targetUserId | String | FK → users.id (null = gửi tất cả) |
+| readBy | Array\<String\> | Danh sách userId đã đọc |
 
 ---
 
-## 10. notifications
-| Field | Type | Note |
-|-------|------|------|
-| id | String | PK |
-| sender_id | String | FK → users.id |
-| target_user_id | String | FK → users.id (nullable = gửi tất cả) |
-| target_role | String | `all` / `tenant` / `admin` |
-| title | String | |
-| body | String | |
-| type | String | `general` / `invoice` / `contract` / `maintenance` |
-| reference_id | String | ID của invoice/contract liên quan |
-| reference_type | String | `invoice` / `contract` / `room` |
-| is_read | Boolean | |
-| created_at | Timestamp | |
-
----
-
-## 11. chat_rooms
+## 10. chat_rooms
 | Field | Type | Note |
 |-------|------|------|
 | id | String | PK |
@@ -205,7 +188,7 @@
 
 ---
 
-## 12. messages
+## 11. messages
 | Field | Type | Note |
 |-------|------|------|
 | id | String | PK |
@@ -225,12 +208,11 @@
 users (admin)
   └── properties (tòa nhà)
         └── rooms (phòng)
-              ├── room_services (dịch vụ)
+              ├── room_services (dịch vụ: điện theo số, các dịch vụ khác theo đầu người)
               ├── contracts → users (tenant)
               │     └── invoices
               │           ├── invoice_services
               │           └── payments
-              ├── meter_readings
               └── chat_rooms
                     └── messages
 
