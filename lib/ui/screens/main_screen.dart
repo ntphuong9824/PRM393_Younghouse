@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../providers/notification_provider.dart';
 import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final String userId;
+  final String userName;
+  final String roomInfo;
+
+  const MainScreen({
+    super.key,
+    this.userId = 'user_001', // TODO: thay bằng userId thực từ Firebase Auth
+    this.userName = 'Nguyễn Văn A',
+    this.roomInfo = 'Phòng 302 - Nhà Young House 1',
+  });
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -15,36 +26,39 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    // Bắt đầu lắng nghe thông báo realtime ngay khi vào màn hình chính
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context
+          .read<NotificationProvider>()
+          .listenToNotifications(widget.userId);
+    });
+  }
+
   void _onFeatureTap(String title) {
     if (title == 'Thanh toán') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentDetailScreen()),
-      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PaymentDetailScreen()));
     } else if (title == 'Thông báo') {
-      // Có thể dùng chung giao diện Chat hoặc trang riêng
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const NotificationScreen()),
+        MaterialPageRoute(
+          builder: (_) => NotificationScreen(userId: widget.userId),
+        ),
       );
     }
   }
 
   void _onBottomNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-    
-    if (index == 1) { // Tab Hỗ trợ
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ChatSupportScreen()),
-      );
-    } else if (index == 2) { // Tab Lịch sử
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentHistoryScreen()),
-      );
+    setState(() => _selectedIndex = index);
+    if (index == 1) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const ChatSupportScreen()));
+    } else if (index == 2) {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()));
     }
   }
 
@@ -53,25 +67,21 @@ class _MainScreenState extends State<MainScreen> {
       'title': 'Thông báo',
       'icon': Icons.notifications_active_outlined,
       'color': Colors.orange,
-      'count': '3',
     },
     {
       'title': 'Hợp đồng',
       'icon': Icons.assignment_outlined,
       'color': Colors.blue,
-      'count': null,
     },
     {
       'title': 'Thanh toán',
       'icon': Icons.account_balance_wallet_outlined,
       'color': Colors.green,
-      'count': null,
     },
     {
       'title': 'Báo cáo',
       'icon': Icons.analytics_outlined,
       'color': Colors.purple,
-      'count': null,
     },
   ];
 
@@ -80,7 +90,8 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Young House", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Young House',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -104,25 +115,23 @@ class _MainScreenState extends State<MainScreen> {
                   bottomRight: Radius.circular(32),
                 ),
               ),
-              child: const Column(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Text('Xin chào,',
+                      style: TextStyle(color: Colors.white70, fontSize: 16)),
                   Text(
-                    "Xin chào,",
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    widget.userName,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8),
                   Text(
-                    "Nguyễn Văn A",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    "Phòng 302 - Nhà Young House 1",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
+                    widget.roomInfo,
+                    style:
+                        const TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ],
               ),
@@ -131,31 +140,39 @@ class _MainScreenState extends State<MainScreen> {
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
-                "Dịch vụ tiện ích",
+                'Dịch vụ tiện ích',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark),
               ),
             ),
 
             // Features Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 1.1,
-                ),
-                itemCount: _features.length,
-                itemBuilder: (context, index) {
-                  final item = _features[index];
-                  return _buildFeatureCard(item);
+              child: Consumer<NotificationProvider>(
+                builder: (context, provider, _) {
+                  final unread = provider.unreadCount(widget.userId);
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      childAspectRatio: 1.1,
+                    ),
+                    itemCount: _features.length,
+                    itemBuilder: (context, index) {
+                      final item = _features[index];
+                      final count = item['title'] == 'Thông báo' && unread > 0
+                          ? unread.toString()
+                          : null;
+                      return _buildFeatureCard(item, count);
+                    },
+                  );
                 },
               ),
             ),
@@ -169,16 +186,20 @@ class _MainScreenState extends State<MainScreen> {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Trang chủ"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: "Hỗ trợ"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "Lịch sử"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Tài khoản"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.home), label: 'Trang chủ'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline), label: 'Hỗ trợ'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.history), label: 'Lịch sử'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: 'Tài khoản'),
         ],
       ),
     );
   }
 
-  Widget _buildFeatureCard(Map<String, dynamic> item) {
+  Widget _buildFeatureCard(Map<String, dynamic> item, String? count) {
     return InkWell(
       onTap: () => _onFeatureTap(item['title']),
       child: Container(
@@ -204,24 +225,26 @@ class _MainScreenState extends State<MainScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: item['color'].withOpacity(0.1),
+                    color: (item['color'] as Color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(item['icon'], color: item['color'], size: 28),
+                  child: Icon(item['icon'],
+                      color: item['color'] as Color, size: 28),
                 ),
-                if (item['count'] != null)
+                if (count != null)
                   Positioned(
                     right: -5,
                     top: -5,
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
+                          color: Colors.red, shape: BoxShape.circle),
                       child: Text(
-                        item['count'],
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        count,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
@@ -230,10 +253,9 @@ class _MainScreenState extends State<MainScreen> {
             Text(
               item['title'],
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textDark),
             ),
           ],
         ),

@@ -1,0 +1,41 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+class NotificationModel {
+  final String id;
+  final String title;
+  final String message;
+  final DateTime createdAt;
+  final String? targetUserId; // null = gửi tất cả
+  final List<String> readBy; // danh sách userId đã đọc
+
+  NotificationModel({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.createdAt,
+    this.targetUserId,
+    this.readBy = const [],
+  });
+
+  bool isReadBy(String userId) => readBy.contains(userId);
+
+  factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    return NotificationModel(
+      id: doc.id,
+      title: data['title'] ?? '',
+      message: data['message'] ?? '',
+      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      targetUserId: data['targetUserId'],
+      readBy: List<String>.from(data['readBy'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+    'title': title,
+    'message': message,
+    'createdAt': Timestamp.fromDate(createdAt),
+    'targetUserId': targetUserId,
+    'readBy': readBy,
+  };
+}
