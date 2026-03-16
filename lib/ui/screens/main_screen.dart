@@ -4,6 +4,7 @@ import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
+import 'create_invoice_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -17,16 +18,14 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onFeatureTap(String title) {
     if (title == 'Thanh toán') {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentDetailScreen()),
-      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PaymentDetailScreen()));
     } else if (title == 'Thông báo') {
-      // Có thể dùng chung giao diện Chat hoặc trang riêng
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const NotificationScreen()),
-      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const NotificationScreen()));
+    } else if (title == 'Tạo hoá đơn') {
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const CreateInvoiceScreen()));
     }
   }
 
@@ -34,13 +33,15 @@ class _MainScreenState extends State<MainScreen> {
     setState(() {
       _selectedIndex = index;
     });
-    
-    if (index == 1) { // Tab Hỗ trợ
+
+    if (index == 1) {
+      // Tab Hỗ trợ
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const ChatSupportScreen()),
       );
-    } else if (index == 2) { // Tab Lịch sử
+    } else if (index == 2) {
+      // Tab Lịch sử
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const PaymentHistoryScreen()),
@@ -68,9 +69,9 @@ class _MainScreenState extends State<MainScreen> {
       'count': null,
     },
     {
-      'title': 'Báo cáo',
-      'icon': Icons.analytics_outlined,
-      'color': Colors.purple,
+      'title': 'Tạo hoá đơn',
+      'icon': Icons.receipt_long_outlined,
+      'color': AppColors.primary,
       'count': null,
     },
   ];
@@ -80,7 +81,8 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Young House", style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text("Young House",
+            style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
           IconButton(
@@ -170,9 +172,11 @@ class _MainScreenState extends State<MainScreen> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: "Trang chủ"),
-          BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_outline), label: "Hỗ trợ"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline), label: "Hỗ trợ"),
           BottomNavigationBarItem(icon: Icon(Icons.history), label: "Lịch sử"),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Tài khoản"),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline), label: "Tài khoản"),
         ],
       ),
     );
@@ -221,7 +225,10 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       child: Text(
                         item['count'],
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
