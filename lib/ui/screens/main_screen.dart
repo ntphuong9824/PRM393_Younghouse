@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/invoice_service.dart';
 import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
+import 'select_invoice_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 import 'create_invoice_screen.dart';
@@ -16,36 +18,43 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
 
-  void _onFeatureTap(String title) {
-    if (title == 'Thanh toán') {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const PaymentDetailScreen()));
-    } else if (title == 'Thông báo') {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const NotificationScreen()));
-    } else if (title == 'Tạo hoá đơn') {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const CreateInvoiceScreen()));
+  Future<void> _onFeatureTap(String title) async {
+    switch (title) {
+      case 'Thanh toán':
+        final invoices = await InvoiceService().getAllInvoices();
+        final unpaid = invoices.where((i) => !i.isPaid).toList();
+        if (!mounted) return;
+        if (unpaid.length == 1) {
+          // Chỉ 1 hoá đơn chưa trả → vào thẳng chi tiết
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => PaymentDetailScreen(invoice: unpaid.first)));
+        } else {
+          // 0 hoặc nhiều hơn 1 → vào màn hình chọn
+          Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const SelectInvoiceScreen()));
+        }
+        break;
+      case 'Thông báo':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const NotificationScreen()));
+        break;
+      case 'Tạo hoá đơn':
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const CreateInvoiceScreen()));
+        break;
     }
   }
 
   void _onBottomNavTap(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-
+    setState(() => _selectedIndex = index);
     if (index == 1) {
-      // Tab Hỗ trợ
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const ChatSupportScreen()),
-      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const ChatSupportScreen()));
     } else if (index == 2) {
-      // Tab Lịch sử
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PaymentHistoryScreen()),
-      );
+      Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const PaymentHistoryScreen()));
     }
   }
 
@@ -54,25 +63,25 @@ class _MainScreenState extends State<MainScreen> {
       'title': 'Thông báo',
       'icon': Icons.notifications_active_outlined,
       'color': Colors.orange,
-      'count': '3',
+      'count': '3'
     },
     {
       'title': 'Hợp đồng',
       'icon': Icons.assignment_outlined,
       'color': Colors.blue,
-      'count': null,
+      'count': null
     },
     {
       'title': 'Thanh toán',
       'icon': Icons.account_balance_wallet_outlined,
       'color': Colors.green,
-      'count': null,
+      'count': null
     },
     {
       'title': 'Tạo hoá đơn',
       'icon': Icons.receipt_long_outlined,
       'color': AppColors.primary,
-      'count': null,
+      'count': null
     },
   ];
 
@@ -81,14 +90,11 @@ class _MainScreenState extends State<MainScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text("Young House",
+        title: const Text('Young House',
             style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.person_outline),
-          ),
+          IconButton(onPressed: () {}, icon: const Icon(Icons.person_outline)),
         ],
       ),
       body: SingleChildScrollView(
@@ -109,40 +115,27 @@ class _MainScreenState extends State<MainScreen> {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    "Xin chào,",
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  Text(
-                    "Nguyễn Văn A",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  Text('Xin chào,',
+                      style: TextStyle(color: Colors.white70, fontSize: 16)),
+                  Text('Nguyễn Văn A',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold)),
                   SizedBox(height: 8),
-                  Text(
-                    "Phòng 302 - Nhà Young House 1",
-                    style: TextStyle(color: Colors.white, fontSize: 14),
-                  ),
+                  Text('Phòng 302 - Nhà Young House 1',
+                      style: TextStyle(color: Colors.white, fontSize: 14)),
                 ],
               ),
             ),
-
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
-              child: Text(
-                "Dịch vụ tiện ích",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
+              child: Text('Dịch vụ tiện ích',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark)),
             ),
-
-            // Features Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: GridView.builder(
@@ -155,10 +148,8 @@ class _MainScreenState extends State<MainScreen> {
                   childAspectRatio: 1.1,
                 ),
                 itemCount: _features.length,
-                itemBuilder: (context, index) {
-                  final item = _features[index];
-                  return _buildFeatureCard(item);
-                },
+                itemBuilder: (context, index) =>
+                    _buildFeatureCard(_features[index]),
               ),
             ),
           ],
@@ -171,12 +162,12 @@ class _MainScreenState extends State<MainScreen> {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: "Trang chủ"),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline), label: "Hỗ trợ"),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: "Lịch sử"),
+              icon: Icon(Icons.chat_bubble_outline), label: 'Hỗ trợ'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Lịch sử'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: "Tài khoản"),
+              icon: Icon(Icons.person_outline), label: 'Tài khoản'),
         ],
       ),
     );
@@ -192,7 +183,7 @@ class _MainScreenState extends State<MainScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -208,10 +199,11 @@ class _MainScreenState extends State<MainScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: item['color'].withOpacity(0.1),
+                    color: (item['color'] as Color).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(item['icon'], color: item['color'], size: 28),
+                  child: Icon(item['icon'] as IconData,
+                      color: item['color'] as Color, size: 28),
                 ),
                 if (item['count'] != null)
                   Positioned(
@@ -220,28 +212,21 @@ class _MainScreenState extends State<MainScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        item['count'],
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold),
-                      ),
+                          color: Colors.red, shape: BoxShape.circle),
+                      child: Text(item['count'],
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
               ],
             ),
-            Text(
-              item['title'],
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
+            Text(item['title'],
+                style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark)),
           ],
         ),
       ),

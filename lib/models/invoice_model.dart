@@ -24,24 +24,22 @@ class InvoiceModel {
   double get totalAmount =>
       room.baseRent + room.totalWaterService + electricityCost;
 
-  Map<String, dynamic> toFirestore() {
-    return {
-      'id': id,
-      'roomId': room.roomId,
-      'roomName': room.roomName,
-      'baseRent': room.baseRent,
-      'waterServicePerPerson': room.waterServicePerPerson,
-      'numberOfPeople': room.numberOfPeople,
-      'electricityPricePerUnit': room.electricityPricePerUnit,
-      'month': month.toIso8601String(),
-      'electricityStart': electricityStart,
-      'electricityEnd': electricityEnd,
-      'isPaid': isPaid,
-      'totalAmount': totalAmount,
-      'createdAt':
-          createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
-    };
-  }
+  Map<String, dynamic> toFirestore() => {
+        'id': id,
+        'roomId': room.roomId,
+        'roomName': room.roomName,
+        'baseRent': room.baseRent,
+        'waterServicePerPerson': room.waterServicePerPerson,
+        'numberOfPeople': room.numberOfPeople,
+        'electricityPricePerUnit': room.electricityPricePerUnit,
+        'month': month.toIso8601String(),
+        'electricityStart': electricityStart,
+        'electricityEnd': electricityEnd,
+        'isPaid': isPaid,
+        'totalAmount': totalAmount,
+        'createdAt':
+            createdAt?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      };
 
   factory InvoiceModel.fromFirestore(Map<String, dynamic> data) {
     final room = RoomModel(

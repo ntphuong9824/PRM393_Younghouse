@@ -27,29 +27,25 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _electricityEndCtrl = TextEditingController();
 
   DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
-  final _currencyFormat = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+  final _fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
 
-  double get _electricityUsed {
-    final start = double.tryParse(_electricityStartCtrl.text) ?? 0;
-    final end = double.tryParse(_electricityEndCtrl.text) ?? 0;
-    return (end - start).clamp(0, double.infinity);
+  double get _used {
+    final s = double.tryParse(_electricityStartCtrl.text) ?? 0;
+    final e = double.tryParse(_electricityEndCtrl.text) ?? 0;
+    return (e - s).clamp(0, double.infinity);
   }
 
-  double get _electricityCost =>
-      _electricityUsed * (double.tryParse(_electricityPriceCtrl.text) ?? 0);
-
+  double get _elecCost =>
+      _used * (double.tryParse(_electricityPriceCtrl.text) ?? 0);
   double get _waterTotal =>
       (double.tryParse(_waterPerPersonCtrl.text) ?? 0) *
       (int.tryParse(_numberOfPeopleCtrl.text) ?? 1);
-
-  double get _totalAmount =>
-      (double.tryParse(_baseRentCtrl.text) ?? 0) +
-      _waterTotal +
-      _electricityCost;
+  double get _total =>
+      (double.tryParse(_baseRentCtrl.text) ?? 0) + _waterTotal + _elecCost;
 
   Future<void> _pickMonth() async {
-    int year = _selectedMonth.year;
-    int month = _selectedMonth.month;
+    final year = _selectedMonth.year;
+    final month = _selectedMonth.month;
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -59,13 +55,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: GridView.builder(
             shrinkWrap: true,
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              childAspectRatio: 1.2,
-            ),
+                crossAxisCount: 4, childAspectRatio: 1.2),
             itemCount: 12,
             itemBuilder: (_, i) {
               final m = i + 1;
-              final selected = m == month;
+              final sel = m == month;
               return GestureDetector(
                 onTap: () {
                   setState(() => _selectedMonth = DateTime(year, m));
@@ -74,15 +68,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.primary : Colors.grey.shade100,
+                    color: sel ? AppColors.primary : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Center(
                     child: Text('T$m',
                         style: TextStyle(
-                          color: selected ? Colors.white : AppColors.textDark,
-                          fontWeight: FontWeight.bold,
-                        )),
+                            color: sel ? Colors.white : AppColors.textDark,
+                            fontWeight: FontWeight.bold)),
                   ),
                 ),
               );
@@ -114,18 +107,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         numberOfPeople: int.parse(_numberOfPeopleCtrl.text),
         electricityPricePerUnit: double.parse(_electricityPriceCtrl.text),
       );
-      final invoiceId =
+      final id =
           'INV-${_roomIdCtrl.text.trim()}-${_selectedMonth.month.toString().padLeft(2, '0')}-${_selectedMonth.year}';
-      final invoice = InvoiceModel(
-        id: invoiceId,
+      await _invoiceService.createInvoice(InvoiceModel(
+        id: id,
         room: room,
         month: _selectedMonth,
         electricityStart: start,
         electricityEnd: end,
         isPaid: false,
         createdAt: DateTime.now(),
-      );
-      await _invoiceService.createInvoice(invoice);
+      ));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -136,9 +128,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Lỗi: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -177,8 +168,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Tháng ---
-              _sectionLabel('Tháng lập hoá đơn'),
+              _label('Tháng lập hoá đơn'),
               const SizedBox(height: 8),
               GestureDetector(
                 onTap: _pickMonth,
@@ -190,26 +180,19 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade200),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month,
-                          color: AppColors.primary),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Tháng ${_selectedMonth.month}/${_selectedMonth.year}',
+                  child: Row(children: [
+                    const Icon(Icons.calendar_month, color: AppColors.primary),
+                    const SizedBox(width: 12),
+                    Text('Tháng ${_selectedMonth.month}/${_selectedMonth.year}',
                         style: const TextStyle(
-                            fontSize: 15, fontWeight: FontWeight.w600),
-                      ),
-                      const Spacer(),
-                      const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                    ],
-                  ),
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                    const Spacer(),
+                    const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                  ]),
                 ),
               ),
-
               const SizedBox(height: 20),
-              // --- Thông tin phòng ---
-              _sectionLabel('Thông tin phòng'),
+              _label('Thông tin phòng'),
               const SizedBox(height: 8),
               _card([
                 _field(_roomIdCtrl, 'Mã phòng', Icons.meeting_room),
@@ -218,22 +201,17 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 const SizedBox(height: 12),
                 _numField(_baseRentCtrl, 'Tiền phòng (₫)', Icons.attach_money),
               ]),
-
               const SizedBox(height: 20),
-              // --- Nước & Dịch vụ ---
-              _sectionLabel('Nước & Dịch vụ'),
+              _label('Nước & Dịch vụ'),
               const SizedBox(height: 8),
               _card([
                 _numField(_waterPerPersonCtrl, 'Tiền nước/người (₫)',
                     Icons.water_drop),
                 const SizedBox(height: 12),
-                _numField(_numberOfPeopleCtrl, 'Số người ở', Icons.people,
-                    isInt: true),
+                _numField(_numberOfPeopleCtrl, 'Số người ở', Icons.people),
               ]),
-
               const SizedBox(height: 20),
-              // --- Chỉ số điện ---
-              _sectionLabel('Chỉ số điện'),
+              _label('Chỉ số điện'),
               const SizedBox(height: 8),
               _card([
                 _numField(_electricityPriceCtrl, 'Giá điện/số (₫)', Icons.bolt),
@@ -243,15 +221,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 const SizedBox(height: 12),
                 _numField(_electricityEndCtrl, 'Chỉ số cuối kỳ',
                     Icons.electric_meter),
-                if (_electricityUsed > 0) ...[
+                if (_used > 0) ...[
                   const SizedBox(height: 8),
-                  Text('Tiêu thụ: ${_electricityUsed.toInt()} số',
+                  Text('Tiêu thụ: ${_used.toInt()} số',
                       style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                 ],
               ]),
-
               const SizedBox(height: 20),
-              // --- Preview tổng tiền ---
+              // Preview
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -260,34 +237,29 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   border: Border.all(
                       color: AppColors.primary.withValues(alpha: 0.2)),
                 ),
-                child: Column(
-                  children: [
-                    _previewRow(
-                        'Tiền phòng', double.tryParse(_baseRentCtrl.text) ?? 0),
-                    const SizedBox(height: 6),
-                    _previewRow('Nước & Dịch vụ', _waterTotal),
-                    const SizedBox(height: 6),
-                    _previewRow('Tiền điện', _electricityCost),
-                    const Divider(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('TỔNG CỘNG',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
-                        Text(
-                          _currencyFormat.format(_totalAmount),
+                child: Column(children: [
+                  _previewRow(
+                      'Tiền phòng', double.tryParse(_baseRentCtrl.text) ?? 0),
+                  const SizedBox(height: 6),
+                  _previewRow('Nước & Dịch vụ', _waterTotal),
+                  const SizedBox(height: 6),
+                  _previewRow('Tiền điện', _elecCost),
+                  const Divider(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('TỔNG CỘNG',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 16)),
+                      Text(_fmt.format(_total),
                           style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 18,
-                              color: AppColors.primary),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                              color: AppColors.primary)),
+                    ],
+                  ),
+                ]),
               ),
-
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
@@ -315,7 +287,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
     );
   }
 
-  Widget _sectionLabel(String t) => Text(t,
+  Widget _label(String t) => Text(t,
       style: const TextStyle(
           fontSize: 15,
           fontWeight: FontWeight.bold,
@@ -349,8 +321,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         decoration: _deco(label, icon),
       );
 
-  Widget _numField(TextEditingController c, String label, IconData icon,
-          {bool isInt = false}) =>
+  Widget _numField(TextEditingController c, String label, IconData icon) =>
       TextFormField(
         controller: c,
         keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -366,7 +337,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: TextStyle(color: Colors.grey[700], fontSize: 14)),
-          Text(_currencyFormat.format(amount),
+          Text(_fmt.format(amount),
               style:
                   const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
         ],

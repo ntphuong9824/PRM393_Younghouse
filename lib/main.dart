@@ -6,24 +6,22 @@ import 'core/theme/app_theme.dart';
 import 'ui/screens/splash_screen.dart';
 
 void main() async {
-  // Bắt buộc phải gọi hàm này trước khi dùng các plugin native (Firebase, SQLite...)
   WidgetsFlutterBinding.ensureInitialized();
-
   try {
-    // Khởi tạo Firebase với options
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    // Đăng nhập ẩn danh để có auth token hợp lệ với Firestore
+    // Đăng nhập ẩn danh để Firestore Rules cho phép đọc/ghi
     if (FirebaseAuth.instance.currentUser == null) {
-      await FirebaseAuth.instance.signInAnonymously();
+      final cred = await FirebaseAuth.instance.signInAnonymously();
+      debugPrint('✅ Firebase connected, uid: ${cred.user?.uid}');
+    } else {
+      debugPrint(
+          '✅ Firebase already signed in: ${FirebaseAuth.instance.currentUser?.uid}');
     }
-    debugPrint("✅ Đã kết nối thành công với Firebase!");
   } catch (e) {
-    debugPrint("❌ Lỗi kết nối Firebase: $e");
-    // Bạn vẫn có thể chạy app bằng cách bắt lỗi này nếu cần
+    debugPrint('❌ Firebase error: $e');
   }
-
   runApp(const MyApp());
 }
 
