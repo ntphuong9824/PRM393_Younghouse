@@ -1,19 +1,108 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class RoomModel {
-  final String roomId;
-  final String roomName;
-  final double baseRent; // Giá phòng cố định (vd: 1.800.000)
-  final double waterServicePerPerson; // Tiền nước + dịch vụ mỗi người (vd: 100.000)
-  final int numberOfPeople; // Số người ở
-  final double electricityPricePerUnit; // Giá điện mỗi số (vd: 3.000)
+  final String id;
+  final String propertyId;
+  final String? currentTenantId;
+  final String? currentContractId;
+  final String roomNumber;
+  final int floor;
+  final double areaSqm;
+  final double basePrice;
+  final double depositAmount;
+  final String? description;
+  final List<String> images;
+  final String status; // vacant / occupied / maintenance
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   RoomModel({
-    required this.roomId,
-    required this.roomName,
-    required this.baseRent,
-    required this.waterServicePerPerson,
-    required this.numberOfPeople,
-    required this.electricityPricePerUnit,
+    required this.id,
+    required this.propertyId,
+    this.currentTenantId,
+    this.currentContractId,
+    required this.roomNumber,
+    this.floor = 1,
+    this.areaSqm = 0,
+    required this.basePrice,
+    this.depositAmount = 0,
+    this.description,
+    this.images = const [],
+    this.status = 'vacant',
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  double get totalWaterService => waterServicePerPerson * numberOfPeople;
+  factory RoomModel.fromFirestore(DocumentSnapshot doc) {
+    final d = doc.data() as Map<String, dynamic>;
+    return RoomModel(
+      id: doc.id,
+      propertyId: d['property_id'] ?? '',
+      currentTenantId: d['current_tenant_id'],
+      currentContractId: d['current_contract_id'],
+      roomNumber: d['room_number'] ?? '',
+      floor: d['floor'] ?? 1,
+      areaSqm: (d['area_sqm'] ?? 0).toDouble(),
+      basePrice: (d['base_price'] ?? 0).toDouble(),
+      depositAmount: (d['deposit_amount'] ?? 0).toDouble(),
+      description: d['description'],
+      images: List<String>.from(d['images'] ?? []),
+      status: d['status'] ?? 'vacant',
+      createdAt: (d['created_at'] as Timestamp).toDate(),
+      updatedAt: (d['updated_at'] as Timestamp).toDate(),
+    );
+  }
+
+  factory RoomModel.fromSqlite(Map<String, dynamic> d) {
+    return RoomModel(
+      id: d['id'],
+      propertyId: d['property_id'] ?? '',
+      currentTenantId: d['current_tenant_id'],
+      currentContractId: d['current_contract_id'],
+      roomNumber: d['room_number'] ?? '',
+      floor: d['floor'] ?? 1,
+      areaSqm: d['area_sqm'] ?? 0.0,
+      basePrice: d['base_price'] ?? 0.0,
+      depositAmount: d['deposit_amount'] ?? 0.0,
+      description: d['description'],
+      images: d['images'] != null ? (d['images'] as String).split(',').where((e) => e.isNotEmpty).toList() : [],
+      status: d['status'] ?? 'vacant',
+      createdAt: DateTime.parse(d['created_at']),
+      updatedAt: DateTime.parse(d['updated_at']),
+    );
+  }
+
+  Map<String, dynamic> toFirestore() => {
+    'property_id': propertyId,
+    'current_tenant_id': currentTenantId,
+    'current_contract_id': currentContractId,
+    'room_number': roomNumber,
+    'floor': floor,
+    'area_sqm': areaSqm,
+    'base_price': basePrice,
+    'deposit_amount': depositAmount,
+    'description': description,
+    'images': images,
+    'status': status,
+    'created_at': Timestamp.fromDate(createdAt),
+    'updated_at': Timestamp.fromDate(updatedAt),
+  };
+
+  Map<String, dynamic> toSqlite() => {
+    'id': id,
+    'property_id': propertyId,
+    'current_tenant_id': currentTenantId,
+    'current_contract_id': currentContractId,
+    'room_number': roomNumber,
+    'floor': floor,
+    'area_sqm': areaSqm,
+    'base_price': basePrice,
+    'deposit_amount': depositAmount,
+    'description': description,
+    'images': images.join(','),
+    'status': status,
+    'created_at': createdAt.toIso8601String(),
+    'updated_at': updatedAt.toIso8601String(),
+    'is_synced': 1,
+  };
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
-import 'profile_completion_screen.dart'; // Chuyển đến trang hoàn thiện hồ sơ
+import 'profile_completion_screen.dart';
+import 'admin_send_notification_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,11 +15,23 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
 
   void _login() {
-    // Giả lập sau khi đăng nhập thành công
-    // Nếu là lần đầu hoặc chưa đủ thông tin, chuyển đến ProfileCompletionScreen
+    final phone = _phoneController.text.trim();
+    if (phone == '0000') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminSendNotificationScreen()),
+      );
+      return;
+    }
+    // Tenant → hoàn thiện hồ sơ (dùng phone làm userId tạm)
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const ProfileCompletionScreen()),
+      MaterialPageRoute(
+        builder: (_) => ProfileCompletionScreen(
+          userId: 'user_$phone',
+          phone: phone,
+        ),
+      ),
     );
   }
 
@@ -75,6 +88,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     controller: _phoneController,
                     decoration: InputDecoration(
                       labelText: "Số điện thoại",
+                      hintText: "Nhập 0000 để vào trang admin",
                       prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
