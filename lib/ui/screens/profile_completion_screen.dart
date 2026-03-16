@@ -56,7 +56,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       try {
         final parts = _dobController.text.split('/');
         if (parts.length == 3) {
-          dob = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+          dob = DateTime(
+              int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
         }
       } catch (_) {}
 
@@ -105,24 +106,28 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         await local.upsert('guardians', g.toSqlite());
       }
 
-      // Sync lên Firestore
-      final batch = FirebaseFirestore.instance.batch();
-      batch.set(
-        FirebaseFirestore.instance.collection('users').doc(widget.userId),
-        user.toFirestore(),
-        SetOptions(merge: true),
-      );
-      for (final g in guardians) {
+      // Sync lên Firestore (optional — bỏ qua nếu lỗi permission)
+      try {
+        final batch = FirebaseFirestore.instance.batch();
         batch.set(
-          FirebaseFirestore.instance
-              .collection('users')
-              .doc(widget.userId)
-              .collection('guardians')
-              .doc(g.id),
-          g.toFirestore(),
+          FirebaseFirestore.instance.collection('users').doc(widget.userId),
+          user.toFirestore(),
+          SetOptions(merge: true),
         );
+        for (final g in guardians) {
+          batch.set(
+            FirebaseFirestore.instance
+                .collection('users')
+                .doc(widget.userId)
+                .collection('guardians')
+                .doc(g.id),
+            g.toFirestore(),
+          );
+        }
+        await batch.commit();
+      } catch (_) {
+        // Firestore permission-denied — đã lưu local, tiếp tục
       }
-      await batch.commit();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -168,17 +173,24 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text("Thông tin cá nhân",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary)),
               const SizedBox(height: 16),
               _field(_fullNameController, "Họ và tên", Icons.person),
               const SizedBox(height: 16),
-              _field(_dobController, "Ngày sinh", Icons.calendar_today, hint: "DD/MM/YYYY"),
+              _field(_dobController, "Ngày sinh", Icons.calendar_today,
+                  hint: "DD/MM/YYYY"),
               const SizedBox(height: 16),
               _field(_idNumberController, "Số CCCD/CMND", Icons.badge),
 
               const SizedBox(height: 32),
               const Text("Thông tin người giám hộ",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primary)),
               const SizedBox(height: 4),
               const Text("Bắt buộc ít nhất 1 người",
                   style: TextStyle(fontSize: 13, color: Colors.grey)),
@@ -211,12 +223,16 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                   onPressed: _isSaving ? null : _submitProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
                   child: _isSaving
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text("HOÀN TẤT ĐĂNG KÝ",
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white)),
                 ),
               ),
               const SizedBox(height: 20),
@@ -247,9 +263,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           Row(children: [
             Icon(icon, color: AppColors.primary, size: 18),
             const SizedBox(width: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            Text(title,
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
             if (!required)
-              const Text(' (tuỳ chọn)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              const Text(' (tuỳ chọn)',
+                  style: TextStyle(color: Colors.grey, fontSize: 12)),
           ]),
           const SizedBox(height: 12),
           _field(nameCtrl, "Họ tên $title", Icons.person, required: required),

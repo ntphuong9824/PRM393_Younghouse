@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/notification_provider.dart';
+import '../../services/invoice_service.dart';
 import 'payment_history_screen.dart';
+import 'payment_detail_screen.dart';
+import 'select_invoice_screen.dart';
+import 'create_invoice_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 
@@ -13,7 +17,7 @@ class MainScreen extends StatefulWidget {
 
   const MainScreen({
     super.key,
-    this.userId = 'user_001', // TODO: thay bằng userId thực từ Firebase Auth
+    this.userId = 'user_001',
     this.userName = 'Nguyễn Văn A',
     this.roomInfo = 'Phòng 302 - Nhà Young House 1',
   });
@@ -24,22 +28,48 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  final _invoiceService = InvoiceService();
 
   @override
   void initState() {
     super.initState();
-    // Bắt đầu lắng nghe thông báo realtime ngay khi vào màn hình chính
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context
-          .read<NotificationProvider>()
-          .listenToNotifications(widget.userId);
+      context.read<NotificationProvider>().listenToNotifications(widget.userId);
     });
   }
 
-  void _onFeatureTap(String title) {
+  Future<void> _onFeatureTap(String title) async {
     if (title == 'Thanh toán') {
-      // TODO: load invoice từ SQLite rồi truyền vào
-      // Navigator.push(context, MaterialPageRoute(builder: (_) => PaymentDetailScreen(invoice: invoice)));
+      final invoices = await _invoiceService.getInvoicesByTenant(widget.userId);
+      final unpaid = invoices.where((i) => i.status != 'paid').toList();
+      if (!mounted) return;
+      if (unpaid.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không có hoá đơn nào cần thanh toán'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (unpaid.length == 1) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PaymentDetailScreen(invoice: unpaid.first),
+          ),
+        );
+      } else {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => SelectInvoiceScreen(tenantId: widget.userId)),
+        );
+      }
+    } else if (title == 'Tạo hoá đơn') {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => CreateInvoiceScreen(tenantId: widget.userId)),
+      );
     } else if (title == 'Thông báo') {
       Navigator.push(
         context,
@@ -82,8 +112,8 @@ class _MainScreenState extends State<MainScreen> {
       'color': Colors.green,
     },
     {
-      'title': 'Báo cáo',
-      'icon': Icons.analytics_outlined,
+      'title': 'Tạo hoá đơn',
+      'icon': Icons.receipt_long_outlined,
       'color': Colors.purple,
     },
   ];
@@ -107,7 +137,6 @@ class _MainScreenState extends State<MainScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Welcome Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -133,13 +162,11 @@ class _MainScreenState extends State<MainScreen> {
                   const SizedBox(height: 8),
                   Text(
                     widget.roomInfo,
-                    style:
-                        const TextStyle(color: Colors.white, fontSize: 14),
+                    style: const TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ],
               ),
             ),
-
             const Padding(
               padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
               child: Text(
@@ -150,8 +177,6 @@ class _MainScreenState extends State<MainScreen> {
                     color: AppColors.textDark),
               ),
             ),
-
-            // Features Grid
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Consumer<NotificationProvider>(
@@ -179,6 +204,7 @@ class _MainScreenState extends State<MainScreen> {
                 },
               ),
             ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -189,12 +215,10 @@ class _MainScreenState extends State<MainScreen> {
         selectedItemColor: AppColors.primary,
         unselectedItemColor: Colors.grey,
         items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.home), label: 'Trang chủ'),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
           BottomNavigationBarItem(
               icon: Icon(Icons.chat_bubble_outline), label: 'Hỗ trợ'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.history), label: 'Lịch sử'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Lịch sử'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Tài khoản'),
         ],
@@ -212,7 +236,7 @@ class _MainScreenState extends State<MainScreen> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -228,7 +252,7 @@ class _MainScreenState extends State<MainScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (item['color'] as Color).withOpacity(0.1),
+                    color: (item['color'] as Color).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(item['icon'],

@@ -6,7 +6,8 @@ import '../../services/invoice_service.dart';
 import 'payment_detail_screen.dart';
 
 class SelectInvoiceScreen extends StatefulWidget {
-  const SelectInvoiceScreen({super.key});
+  final String tenantId;
+  const SelectInvoiceScreen({super.key, required this.tenantId});
 
   @override
   State<SelectInvoiceScreen> createState() => _SelectInvoiceScreenState();
@@ -19,7 +20,7 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _service.getAllInvoices();
+    _future = _service.getInvoicesByTenant(widget.tenantId);
   }
 
   @override
@@ -43,7 +44,7 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
           }
 
           final all = snapshot.data ?? [];
-          final unpaid = all.where((i) => !i.isPaid).toList();
+          final unpaid = all.where((i) => i.status != 'paid').toList();
 
           if (unpaid.isEmpty) {
             return Center(
@@ -92,8 +93,7 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                             color: Colors.white70, fontSize: 14)),
                     const SizedBox(height: 4),
                     Text(
-                      fmt.format(
-                          unpaid.fold(0.0, (sum, i) => sum + i.totalAmount)),
+                      fmt.format(unpaid.fold(0.0, (s, i) => s + i.totalAmount)),
                       style: const TextStyle(
                           color: Colors.white,
                           fontSize: 26,
@@ -121,6 +121,7 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                   itemCount: unpaid.length,
                   itemBuilder: (context, index) {
                     final inv = unpaid[index];
+                    final isOverdue = inv.status == 'overdue';
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       elevation: 0,
@@ -134,8 +135,8 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                                 builder: (_) =>
                                     PaymentDetailScreen(invoice: inv)),
                           );
-                          // Reload sau khi quay lại
-                          setState(() => _future = _service.getAllInvoices());
+                          setState(() => _future =
+                              _service.getInvoicesByTenant(widget.tenantId));
                         },
                         borderRadius: BorderRadius.circular(16),
                         child: Padding(
@@ -146,18 +147,24 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 10),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.1),
+                                color: (isOverdue ? Colors.red : Colors.orange)
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Column(children: [
-                                Text('T${inv.month.month}',
-                                    style: const TextStyle(
-                                        color: Colors.orange,
+                                Text('T${inv.month}',
+                                    style: TextStyle(
+                                        color: isOverdue
+                                            ? Colors.red
+                                            : Colors.orange,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 18)),
-                                Text('${inv.month.year}',
-                                    style: const TextStyle(
-                                        color: Colors.orange, fontSize: 10)),
+                                Text('${inv.year}',
+                                    style: TextStyle(
+                                        color: isOverdue
+                                            ? Colors.red
+                                            : Colors.orange,
+                                        fontSize: 10)),
                               ]),
                             ),
                             const SizedBox(width: 16),
@@ -166,7 +173,7 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(inv.room.roomName,
+                                  Text('Phòng ${inv.roomId}',
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
@@ -178,23 +185,48 @@ class _SelectInvoiceScreenState extends State<SelectInvoiceScreen> {
                                           fontWeight: FontWeight.bold,
                                           color: AppColors.primary)),
                                   const SizedBox(height: 2),
-                                  Text(
-                                      'Điện: ${inv.electricityUsed.toInt()} số',
+                                  Text('Điện: ${inv.electricUsed} số',
                                       style: TextStyle(
                                           color: Colors.grey[600],
                                           fontSize: 12)),
                                 ],
                               ),
                             ),
-                            // Arrow
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.arrow_forward_ios,
-                                  color: AppColors.primary, size: 14),
+                            // Trạng thái + arrow
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color:
+                                        (isOverdue ? Colors.red : Colors.orange)
+                                            .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    isOverdue ? 'Quá hạn' : 'Chưa trả',
+                                    style: TextStyle(
+                                        color: isOverdue
+                                            ? Colors.red
+                                            : Colors.orange,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary
+                                        .withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.arrow_forward_ios,
+                                      color: AppColors.primary, size: 14),
+                                ),
+                              ],
                             ),
                           ]),
                         ),

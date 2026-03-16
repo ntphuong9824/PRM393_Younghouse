@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 import '../../core/theme/app_colors.dart';
 import '../../models/invoice_model.dart';
-import '../../models/room_model.dart';
 import '../../services/invoice_service.dart';
 
 class CreateInvoiceScreen extends StatefulWidget {
-  const CreateInvoiceScreen({super.key});
+  final String tenantId;
+  const CreateInvoiceScreen({super.key, required this.tenantId});
 
   @override
   State<CreateInvoiceScreen> createState() => _CreateInvoiceScreenState();
@@ -14,38 +15,42 @@ class CreateInvoiceScreen extends StatefulWidget {
 
 class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _invoiceService = InvoiceService();
+  final _service = InvoiceService();
   bool _isLoading = false;
 
   final _roomIdCtrl = TextEditingController(text: 'R302');
-  final _roomNameCtrl = TextEditingController(text: 'Phòng 302');
-  final _baseRentCtrl = TextEditingController(text: '1800000');
-  final _waterPerPersonCtrl = TextEditingController(text: '100000');
-  final _numberOfPeopleCtrl = TextEditingController(text: '2');
-  final _electricityPriceCtrl = TextEditingController(text: '3000');
-  final _electricityStartCtrl = TextEditingController();
-  final _electricityEndCtrl = TextEditingController();
+  final _rentCtrl = TextEditingController(text: '1800000');
+  final _electricPriceCtrl = TextEditingController(text: '3000');
+  final _electricPrevCtrl = TextEditingController();
+  final _electricCurrCtrl = TextEditingController();
+  final _waterPriceCtrl = TextEditingController(text: '15000');
+  final _waterPrevCtrl = TextEditingController(text: '0');
+  final _waterCurrCtrl = TextEditingController(text: '0');
+  final _otherFeesCtrl = TextEditingController(text: '0');
 
-  DateTime _selectedMonth = DateTime(DateTime.now().year, DateTime.now().month);
+  int _month = DateTime.now().month;
+  int _year = DateTime.now().year;
   final _fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
 
-  double get _used {
-    final s = double.tryParse(_electricityStartCtrl.text) ?? 0;
-    final e = double.tryParse(_electricityEndCtrl.text) ?? 0;
-    return (e - s).clamp(0, double.infinity);
-  }
-
-  double get _elecCost =>
-      _used * (double.tryParse(_electricityPriceCtrl.text) ?? 0);
-  double get _waterTotal =>
-      (double.tryParse(_waterPerPersonCtrl.text) ?? 0) *
-      (int.tryParse(_numberOfPeopleCtrl.text) ?? 1);
+  double get _electricUsed => ((int.tryParse(_electricCurrCtrl.text) ?? 0) -
+          (int.tryParse(_electricPrevCtrl.text) ?? 0))
+      .clamp(0, 99999)
+      .toDouble();
+  double get _electricCost =>
+      _electricUsed * (double.tryParse(_electricPriceCtrl.text) ?? 0);
+  double get _waterUsed => ((int.tryParse(_waterCurrCtrl.text) ?? 0) -
+          (int.tryParse(_waterPrevCtrl.text) ?? 0))
+      .clamp(0, 99999)
+      .toDouble();
+  double get _waterCost =>
+      _waterUsed * (double.tryParse(_waterPriceCtrl.text) ?? 0);
   double get _total =>
-      (double.tryParse(_baseRentCtrl.text) ?? 0) + _waterTotal + _elecCost;
+      (double.tryParse(_rentCtrl.text) ?? 0) +
+      _electricCost +
+      _waterCost +
+      (double.tryParse(_otherFeesCtrl.text) ?? 0);
 
   Future<void> _pickMonth() async {
-    final year = _selectedMonth.year;
-    final month = _selectedMonth.month;
     await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -59,10 +64,10 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
             itemCount: 12,
             itemBuilder: (_, i) {
               final m = i + 1;
-              final sel = m == month;
+              final sel = m == _month;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _selectedMonth = DateTime(year, m));
+                  setState(() => _month = m);
                   Navigator.pop(ctx);
                 },
                 child: Container(
@@ -88,36 +93,41 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final start = double.tryParse(_electricityStartCtrl.text) ?? 0;
-    final end = double.tryParse(_electricityEndCtrl.text) ?? 0;
-    if (end <= start) {
+    final ePrev = int.tryParse(_electricPrevCtrl.text) ?? 0;
+    final eCurr = int.tryParse(_electricCurrCtrl.text) ?? 0;
+    if (eCurr < ePrev) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Chỉ số điện cuối phải lớn hơn chỉ số đầu')),
+        const SnackBar(content: Text('Chỉ số điện cuối phải >= chỉ số đầu')),
       );
       return;
     }
     setState(() => _isLoading = true);
     try {
-      final room = RoomModel(
+      final now = DateTime.now();
+      final invoice = InvoiceModel(
+        id: const Uuid().v4(),
+        contractId: '',
         roomId: _roomIdCtrl.text.trim(),
-        roomName: _roomNameCtrl.text.trim(),
-        baseRent: double.parse(_baseRentCtrl.text),
-        waterServicePerPerson: double.parse(_waterPerPersonCtrl.text),
-        numberOfPeople: int.parse(_numberOfPeopleCtrl.text),
-        electricityPricePerUnit: double.parse(_electricityPriceCtrl.text),
+        tenantId: widget.tenantId,
+        landlordId: '',
+        month: _month,
+        year: _year,
+        electricPrev: ePrev,
+        electricCurr: eCurr,
+        electricPrice: double.tryParse(_electricPriceCtrl.text) ?? 0,
+        waterPrev: int.tryParse(_waterPrevCtrl.text) ?? 0,
+        waterCurr: int.tryParse(_waterCurrCtrl.text) ?? 0,
+        waterPrice: double.tryParse(_waterPriceCtrl.text) ?? 0,
+        rentAmount: double.tryParse(_rentCtrl.text) ?? 0,
+        otherFees: double.tryParse(_otherFeesCtrl.text) ?? 0,
+        totalAmount: _total,
+        status: 'unpaid',
+        dueDate: DateTime(_year, _month + 1, 10),
+        createdBy: widget.tenantId,
+        createdAt: now,
+        updatedAt: now,
       );
-      final id =
-          'INV-${_roomIdCtrl.text.trim()}-${_selectedMonth.month.toString().padLeft(2, '0')}-${_selectedMonth.year}';
-      await _invoiceService.createInvoice(InvoiceModel(
-        id: id,
-        room: room,
-        month: _selectedMonth,
-        electricityStart: start,
-        electricityEnd: end,
-        isPaid: false,
-        createdAt: DateTime.now(),
-      ));
+      await _service.createInvoice(invoice);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -139,13 +149,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
   @override
   void dispose() {
     _roomIdCtrl.dispose();
-    _roomNameCtrl.dispose();
-    _baseRentCtrl.dispose();
-    _waterPerPersonCtrl.dispose();
-    _numberOfPeopleCtrl.dispose();
-    _electricityPriceCtrl.dispose();
-    _electricityStartCtrl.dispose();
-    _electricityEndCtrl.dispose();
+    _rentCtrl.dispose();
+    _electricPriceCtrl.dispose();
+    _electricPrevCtrl.dispose();
+    _electricCurrCtrl.dispose();
+    _waterPriceCtrl.dispose();
+    _waterPrevCtrl.dispose();
+    _waterCurrCtrl.dispose();
+    _otherFeesCtrl.dispose();
     super.dispose();
   }
 
@@ -168,6 +179,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Tháng
               _label('Tháng lập hoá đơn'),
               const SizedBox(height: 8),
               GestureDetector(
@@ -183,7 +195,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                   child: Row(children: [
                     const Icon(Icons.calendar_month, color: AppColors.primary),
                     const SizedBox(width: 12),
-                    Text('Tháng ${_selectedMonth.month}/${_selectedMonth.year}',
+                    Text('Tháng $_month/$_year',
                         style: const TextStyle(
                             fontSize: 15, fontWeight: FontWeight.w600)),
                     const Spacer(),
@@ -192,42 +204,56 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // Thông tin phòng
               _label('Thông tin phòng'),
               const SizedBox(height: 8),
               _card([
                 _field(_roomIdCtrl, 'Mã phòng', Icons.meeting_room),
                 const SizedBox(height: 12),
-                _field(_roomNameCtrl, 'Tên phòng', Icons.home),
-                const SizedBox(height: 12),
-                _numField(_baseRentCtrl, 'Tiền phòng (₫)', Icons.attach_money),
+                _numField(_rentCtrl, 'Tiền phòng (₫)', Icons.attach_money),
               ]),
               const SizedBox(height: 20),
-              _label('Nước & Dịch vụ'),
-              const SizedBox(height: 8),
-              _card([
-                _numField(_waterPerPersonCtrl, 'Tiền nước/người (₫)',
-                    Icons.water_drop),
-                const SizedBox(height: 12),
-                _numField(_numberOfPeopleCtrl, 'Số người ở', Icons.people),
-              ]),
-              const SizedBox(height: 20),
+
+              // Điện
               _label('Chỉ số điện'),
               const SizedBox(height: 8),
               _card([
-                _numField(_electricityPriceCtrl, 'Giá điện/số (₫)', Icons.bolt),
+                _numField(_electricPriceCtrl, 'Giá điện/số (₫)', Icons.bolt),
                 const SizedBox(height: 12),
-                _numField(_electricityStartCtrl, 'Chỉ số đầu kỳ',
-                    Icons.electric_meter),
+                _numField(
+                    _electricPrevCtrl, 'Chỉ số đầu kỳ', Icons.electric_meter),
                 const SizedBox(height: 12),
-                _numField(_electricityEndCtrl, 'Chỉ số cuối kỳ',
-                    Icons.electric_meter),
-                if (_used > 0) ...[
+                _numField(
+                    _electricCurrCtrl, 'Chỉ số cuối kỳ', Icons.electric_meter),
+                if (_electricUsed > 0) ...[
                   const SizedBox(height: 8),
-                  Text('Tiêu thụ: ${_used.toInt()} số',
+                  Text('Tiêu thụ: ${_electricUsed.toInt()} số',
                       style: TextStyle(color: Colors.grey[600], fontSize: 13)),
                 ],
               ]),
               const SizedBox(height: 20),
+
+              // Nước
+              _label('Chỉ số nước'),
+              const SizedBox(height: 8),
+              _card([
+                _numField(_waterPriceCtrl, 'Giá nước/m³ (₫)', Icons.water_drop),
+                const SizedBox(height: 12),
+                _numField(_waterPrevCtrl, 'Chỉ số đầu kỳ', Icons.water),
+                const SizedBox(height: 12),
+                _numField(_waterCurrCtrl, 'Chỉ số cuối kỳ', Icons.water),
+              ]),
+              const SizedBox(height: 20),
+
+              // Phí khác
+              _label('Phí khác'),
+              const SizedBox(height: 8),
+              _card([
+                _numField(_otherFeesCtrl, 'Phí khác (₫)', Icons.receipt),
+              ]),
+              const SizedBox(height: 20),
+
               // Preview
               Container(
                 padding: const EdgeInsets.all(16),
@@ -239,11 +265,14 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen> {
                 ),
                 child: Column(children: [
                   _previewRow(
-                      'Tiền phòng', double.tryParse(_baseRentCtrl.text) ?? 0),
+                      'Tiền phòng', double.tryParse(_rentCtrl.text) ?? 0),
                   const SizedBox(height: 6),
-                  _previewRow('Nước & Dịch vụ', _waterTotal),
+                  _previewRow('Tiền điện', _electricCost),
                   const SizedBox(height: 6),
-                  _previewRow('Tiền điện', _elecCost),
+                  _previewRow('Tiền nước', _waterCost),
+                  const SizedBox(height: 6),
+                  _previewRow(
+                      'Phí khác', double.tryParse(_otherFeesCtrl.text) ?? 0),
                   const Divider(height: 20),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
