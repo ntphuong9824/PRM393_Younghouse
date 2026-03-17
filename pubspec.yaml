@@ -27,6 +27,7 @@ dependencies:
   url_launcher: ^6.1.14
   url_launcher_android: ^6.3.28
   crypto: ^3.0.3
+  uuid: ^4.3.3
 
 dev_dependencies:
   flutter_test:

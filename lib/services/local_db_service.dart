@@ -17,27 +17,16 @@ class LocalDbService {
   Future<Database> _initDB(String filePath) async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
-    return await openDatabase(path, version: 3, onCreate: _createDB, onUpgrade: _onUpgrade);
+    return await openDatabase(path,
+        version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      await db.execute('DROP TABLE IF EXISTS user_profile');
-      await db.execute('DROP TABLE IF EXISTS invoices');
-      await _createDB(db, newVersion);
-    }
-    if (oldVersion < 3) {
-      await db.execute('''
-        CREATE TABLE IF NOT EXISTS guardians (
-          id TEXT PRIMARY KEY,
-          user_id TEXT,
-          full_name TEXT,
-          phone TEXT,
-          relationship TEXT,
-          is_synced INTEGER DEFAULT 0
-        )
-      ''');
-    }
+    // Drop bảng có schema thay đổi rồi tạo lại
+    await db.execute('DROP TABLE IF EXISTS invoices');
+    await db.execute('DROP TABLE IF EXISTS users');
+    await db.execute('DROP TABLE IF EXISTS guardians');
+    await _createDB(db, newVersion);
   }
 
   Future _createDB(Database db, int version) async {
@@ -264,9 +253,11 @@ class LocalDbService {
     await db.insert(table, data, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  Future<List<Map<String, dynamic>>> getAll(String table, {String? where, List<dynamic>? whereArgs, String? orderBy}) async {
+  Future<List<Map<String, dynamic>>> getAll(String table,
+      {String? where, List<dynamic>? whereArgs, String? orderBy}) async {
     final db = await database;
-    return db.query(table, where: where, whereArgs: whereArgs, orderBy: orderBy);
+    return db.query(table,
+        where: where, whereArgs: whereArgs, orderBy: orderBy);
   }
 
   Future<Map<String, dynamic>?> getById(String table, String id) async {
