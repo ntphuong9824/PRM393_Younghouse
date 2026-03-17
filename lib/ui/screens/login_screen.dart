@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import 'profile_completion_screen.dart';
-import 'admin_send_notification_screen.dart';
+import 'admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (phone == '0000') {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const AdminSendNotificationScreen()),
+        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
       );
       return;
     }
