@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -13,11 +14,20 @@ class PropertyProvider extends ChangeNotifier {
   bool isLoading = false;
   String? error;
 
+  StreamSubscription? _propertiesSub;
+  StreamSubscription? _roomsSub;
+  String? _currentPropertyId;
+
   List<PropertyModel> get properties => _properties;
   List<RoomModel> get rooms => _rooms;
 
+  int get totalRooms => _rooms.length;
+  int get vacantRooms => _rooms.where((r) => r.status == 'vacant').length;
+  int get occupiedRooms => _rooms.where((r) => r.status == 'occupied').length;
+
   void listenProperties(String landlordId) {
-    _service.streamProperties(landlordId).listen((list) {
+    _propertiesSub?.cancel();
+    _propertiesSub = _service.streamProperties(landlordId).listen((list) {
       _properties = list;
       notifyListeners();
     }, onError: (e) {
@@ -27,10 +37,24 @@ class PropertyProvider extends ChangeNotifier {
   }
 
   void listenRooms(String propertyId) {
-    _service.streamRooms(propertyId).listen((list) {
+    if (_currentPropertyId == propertyId) return; // tránh re-subscribe cùng property
+    _roomsSub?.cancel();
+    _currentPropertyId = propertyId;
+    _rooms = [];
+    _roomsSub = _service.streamRooms(propertyId).listen((list) {
       _rooms = list;
       notifyListeners();
+    }, onError: (e) {
+      error = e.toString();
+      notifyListeners();
     });
+  }
+
+  void resetRooms() {
+    _roomsSub?.cancel();
+    _currentPropertyId = null;
+    _rooms = [];
+    notifyListeners();
   }
 
   Future<void> addProperty({
@@ -101,6 +125,13 @@ class PropertyProvider extends ChangeNotifier {
         updatedAt: now,
       );
       await _service.saveRoom(room);
+      // Cập nhật totalRooms trên property
+      final prop = _properties.firstWhere((p) => p.id == propertyId,
+          orElse: () => throw Exception('Property not found'));
+      await _service.saveProperty(prop.copyWith(
+        totalRooms: prop.totalRooms + 1,
+        updatedAt: now,
+      ));
     } finally {
       isLoading = false;
       notifyListeners();
@@ -116,30 +147,34 @@ class PropertyProvider extends ChangeNotifier {
         final uploaded = await _service.uploadRoomImages(newImages, room.id);
         imageUrls = [...imageUrls, ...uploaded];
       }
-      final updated = RoomModel(
-        id: room.id,
-        propertyId: room.propertyId,
-        currentTenantId: room.currentTenantId,
-        currentContractId: room.currentContractId,
-        roomNumber: room.roomNumber,
-        floor: room.floor,
-        areaSqm: room.areaSqm,
-        basePrice: room.basePrice,
-        depositAmount: room.depositAmount,
-        description: room.description,
+      await _service.saveRoom(room.copyWith(
         images: imageUrls,
-        status: room.status,
-        createdAt: room.createdAt,
         updatedAt: DateTime.now(),
-      );
-      await _service.saveRoom(updated);
+      ));
     } finally {
       isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> deleteRoom(String roomId) async {
+  Future<void> deleteRoom(String roomId, String propertyId) async {
     await _service.deleteRoom(roomId);
+    // Cập nhật totalRooms
+    final propIndex = _properties.indexWhere((p) => p.id == propertyId);
+    if (propIndex != -1) {
+      final prop = _properties[propIndex];
+      final newTotal = (prop.totalRooms - 1).clamp(0, 999);
+      await _service.saveProperty(prop.copyWith(
+        totalRooms: newTotal,
+        updatedAt: DateTime.now(),
+      ));
+    }
+  }
+
+  @override
+  void dispose() {
+    _propertiesSub?.cancel();
+    _roomsSub?.cancel();
+    super.dispose();
   }
 }

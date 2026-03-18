@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/chat_provider.dart';
 import '../login_screen.dart';
@@ -13,7 +12,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
   const AdminDashboardScreen({
     super.key,
-    this.landlordId = AppConstants.tempAdminId,
+    required this.landlordId,
   });
 
   @override

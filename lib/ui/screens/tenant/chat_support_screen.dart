@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../providers/chat_provider.dart';
-import '../../services/auth_service.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../providers/chat_provider.dart';
+import '../../../services/auth_service.dart';
 import '../chat_screen.dart';
 
 /// Lấy admin UID thật từ Firestore rồi mở ChatScreen

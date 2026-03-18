@@ -24,6 +24,7 @@ class _AdminChatListScreenState extends State<AdminChatListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Luôn re-subscribe với landlordId thật (không dùng tempAdminId)
       context.read<ChatProvider>().listenChatRooms(widget.landlordId);
     });
   }
