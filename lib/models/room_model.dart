@@ -33,6 +33,40 @@ class RoomModel {
     required this.updatedAt,
   });
 
+  RoomModel copyWith({
+    String? id,
+    String? propertyId,
+    String? currentTenantId,
+    String? currentContractId,
+    String? roomNumber,
+    int? floor,
+    double? areaSqm,
+    double? basePrice,
+    double? depositAmount,
+    String? description,
+    List<String>? images,
+    String? status,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return RoomModel(
+      id: id ?? this.id,
+      propertyId: propertyId ?? this.propertyId,
+      currentTenantId: currentTenantId ?? this.currentTenantId,
+      currentContractId: currentContractId ?? this.currentContractId,
+      roomNumber: roomNumber ?? this.roomNumber,
+      floor: floor ?? this.floor,
+      areaSqm: areaSqm ?? this.areaSqm,
+      basePrice: basePrice ?? this.basePrice,
+      depositAmount: depositAmount ?? this.depositAmount,
+      description: description ?? this.description,
+      images: images ?? this.images,
+      status: status ?? this.status,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory RoomModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return RoomModel(

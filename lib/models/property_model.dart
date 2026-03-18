@@ -33,6 +33,38 @@ class PropertyModel {
 
   String get fullAddress => '$address, $ward, $district, $city';
 
+  PropertyModel copyWith({
+    String? id,
+    String? landlordId,
+    String? name,
+    String? address,
+    String? ward,
+    String? district,
+    String? city,
+    String? description,
+    int? totalRooms,
+    String? status,
+    List<String>? images,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return PropertyModel(
+      id: id ?? this.id,
+      landlordId: landlordId ?? this.landlordId,
+      name: name ?? this.name,
+      address: address ?? this.address,
+      ward: ward ?? this.ward,
+      district: district ?? this.district,
+      city: city ?? this.city,
+      description: description ?? this.description,
+      totalRooms: totalRooms ?? this.totalRooms,
+      status: status ?? this.status,
+      images: images ?? this.images,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory PropertyModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;
     return PropertyModel(

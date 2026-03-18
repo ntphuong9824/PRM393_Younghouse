@@ -19,6 +19,24 @@ class NotificationModel {
 
   bool isReadBy(String userId) => readBy.contains(userId);
 
+  NotificationModel copyWith({
+    String? id,
+    String? title,
+    String? message,
+    DateTime? createdAt,
+    String? targetUserId,
+    List<String>? readBy,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      message: message ?? this.message,
+      createdAt: createdAt ?? this.createdAt,
+      targetUserId: targetUserId ?? this.targetUserId,
+      readBy: readBy ?? this.readBy,
+    );
+  }
+
   factory NotificationModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return NotificationModel(

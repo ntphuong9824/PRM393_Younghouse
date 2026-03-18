@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/date_formatter.dart';
 import '../../models/notification_model.dart';
 import '../../providers/notification_provider.dart';
 
@@ -222,7 +223,7 @@ class _AdminSendNotificationScreenState
                           children: [
                             Text(n.message),
                             const SizedBox(height: 4),
-                            Text(_formatDate(n.createdAt),
+                            Text(DateFormatter.formatWithTime(n.createdAt),
                                 style: const TextStyle(
                                     fontSize: 11, color: Colors.grey)),
                           ],
@@ -240,10 +241,5 @@ class _AdminSendNotificationScreenState
         ),
       ),
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year} '
-        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 }

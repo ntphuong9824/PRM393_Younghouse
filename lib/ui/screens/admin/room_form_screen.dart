@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/room_model.dart';
 import '../../../providers/property_provider.dart';
+import '../../widgets/app_form_field.dart';
+import '../../widgets/app_save_button.dart';
 
 class RoomFormScreen extends StatefulWidget {
   final String propertyId;
@@ -60,23 +62,20 @@ class _RoomFormScreenState extends State<RoomFormScreen> {
     try {
       final provider = context.read<PropertyProvider>();
       if (_isEdit) {
-        final updated = RoomModel(
-          id: widget.room!.id,
-          propertyId: widget.propertyId,
-          currentTenantId: widget.room!.currentTenantId,
-          currentContractId: widget.room!.currentContractId,
-          roomNumber: _roomNumberCtrl.text.trim(),
-          floor: int.tryParse(_floorCtrl.text) ?? 1,
-          areaSqm: double.tryParse(_areaCtrl.text) ?? 0,
-          basePrice: double.tryParse(_priceCtrl.text) ?? 0,
-          depositAmount: double.tryParse(_depositCtrl.text) ?? 0,
-          description: _descCtrl.text.trim(),
-          images: _existingImages,
-          status: _status,
-          createdAt: widget.room!.createdAt,
-          updatedAt: DateTime.now(),
+        await provider.updateRoom(
+          widget.room!.copyWith(
+            roomNumber: _roomNumberCtrl.text.trim(),
+            floor: int.tryParse(_floorCtrl.text) ?? 1,
+            areaSqm: double.tryParse(_areaCtrl.text) ?? 0,
+            basePrice: double.tryParse(_priceCtrl.text) ?? 0,
+            depositAmount: double.tryParse(_depositCtrl.text) ?? 0,
+            description: _descCtrl.text.trim(),
+            images: _existingImages,
+            status: _status,
+            updatedAt: DateTime.now(),
+          ),
+          newImages: _newImages,
         );
-        await provider.updateRoom(updated, newImages: _newImages);
       } else {
         await provider.addRoom(
           propertyId: widget.propertyId,
@@ -112,20 +111,19 @@ class _RoomFormScreenState extends State<RoomFormScreen> {
         child: Form(
           key: _formKey,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            // Thông tin cơ bản
             Row(children: [
-              Expanded(child: _field(_roomNumberCtrl, 'Số phòng', Icons.meeting_room)),
+              Expanded(child: AppFormField(controller: _roomNumberCtrl, label: 'Số phòng', icon: Icons.meeting_room)),
               const SizedBox(width: 12),
-              Expanded(child: _field(_floorCtrl, 'Tầng', Icons.layers, isNumber: true)),
+              Expanded(child: AppFormField(controller: _floorCtrl, label: 'Tầng', icon: Icons.layers, isNumber: true)),
             ]),
             const SizedBox(height: 16),
-            _field(_areaCtrl, 'Diện tích (m²)', Icons.square_foot, isNumber: true, required: false),
+            AppFormField(controller: _areaCtrl, label: 'Diện tích (m²)', icon: Icons.square_foot, isNumber: true, required: false),
             const SizedBox(height: 16),
-            _field(_priceCtrl, 'Giá thuê (₫)', Icons.attach_money, isNumber: true),
+            AppFormField(controller: _priceCtrl, label: 'Giá thuê (₫)', icon: Icons.attach_money, isNumber: true),
             const SizedBox(height: 16),
-            _field(_depositCtrl, 'Tiền cọc (₫)', Icons.savings, isNumber: true),
+            AppFormField(controller: _depositCtrl, label: 'Tiền cọc (₫)', icon: Icons.savings, isNumber: true),
             const SizedBox(height: 16),
-            _field(_descCtrl, 'Mô tả / Tiện nghi', Icons.description, required: false, maxLines: 3),
+            AppFormField(controller: _descCtrl, label: 'Mô tả / Tiện nghi', icon: Icons.description, required: false, maxLines: 3),
             const SizedBox(height: 16),
 
             // Trạng thái
@@ -203,43 +201,13 @@ class _RoomFormScreenState extends State<RoomFormScreen> {
               ),
             ]),
             const SizedBox(height: 32),
-
-            SizedBox(
-              width: double.infinity, height: 52,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(_isEdit ? 'CẬP NHẬT PHÒNG' : 'THÊM PHÒNG',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
+            AppSaveButton(
+              label: _isEdit ? 'CẬP NHẬT PHÒNG' : 'THÊM PHÒNG',
+              isLoading: _isSaving,
+              onPressed: _save,
             ),
             const SizedBox(height: 20),
           ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _field(TextEditingController ctrl, String label, IconData icon,
-      {bool required = true, bool isNumber = false, int maxLines = 1}) {
-    return TextFormField(
-      controller: ctrl,
-      maxLines: maxLines,
-      keyboardType: isNumber ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
-      validator: required ? (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        filled: true, fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );

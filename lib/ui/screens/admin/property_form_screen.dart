@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/property_model.dart';
 import '../../../providers/property_provider.dart';
+import '../../widgets/app_form_field.dart';
+import '../../widgets/app_save_button.dart';
 
 class PropertyFormScreen extends StatefulWidget {
   final String landlordId;
@@ -46,22 +48,18 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
     try {
       final provider = context.read<PropertyProvider>();
       if (_isEdit) {
-        final updated = PropertyModel(
-          id: widget.property!.id,
-          landlordId: widget.landlordId,
-          name: _nameCtrl.text.trim(),
-          address: _addressCtrl.text.trim(),
-          ward: _wardCtrl.text.trim(),
-          district: _districtCtrl.text.trim(),
-          city: _cityCtrl.text.trim(),
-          description: _descCtrl.text.trim(),
-          status: _status,
-          totalRooms: widget.property!.totalRooms,
-          images: widget.property!.images,
-          createdAt: widget.property!.createdAt,
-          updatedAt: DateTime.now(),
+        await provider.updateProperty(
+          widget.property!.copyWith(
+            name: _nameCtrl.text.trim(),
+            address: _addressCtrl.text.trim(),
+            ward: _wardCtrl.text.trim(),
+            district: _districtCtrl.text.trim(),
+            city: _cityCtrl.text.trim(),
+            description: _descCtrl.text.trim(),
+            status: _status,
+            updatedAt: DateTime.now(),
+          ),
         );
-        await provider.updateProperty(updated);
       } else {
         await provider.addProperty(
           landlordId: widget.landlordId,
@@ -96,19 +94,19 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
         child: Form(
           key: _formKey,
           child: Column(children: [
-            _field(_nameCtrl, 'Tên tòa nhà', Icons.apartment),
+            AppFormField(controller: _nameCtrl, label: 'Tên tòa nhà', icon: Icons.apartment),
             const SizedBox(height: 16),
-            _field(_addressCtrl, 'Số nhà, tên đường', Icons.location_on),
+            AppFormField(controller: _addressCtrl, label: 'Số nhà, tên đường', icon: Icons.location_on),
             const SizedBox(height: 16),
             Row(children: [
-              Expanded(child: _field(_wardCtrl, 'Phường/Xã', Icons.map)),
+              Expanded(child: AppFormField(controller: _wardCtrl, label: 'Phường/Xã', icon: Icons.map)),
               const SizedBox(width: 12),
-              Expanded(child: _field(_districtCtrl, 'Quận/Huyện', Icons.map, required: false)),
+              Expanded(child: AppFormField(controller: _districtCtrl, label: 'Quận/Huyện', icon: Icons.map, required: false)),
             ]),
             const SizedBox(height: 16),
-            _field(_cityCtrl, 'Tỉnh/Thành phố', Icons.location_city),
+            AppFormField(controller: _cityCtrl, label: 'Tỉnh/Thành phố', icon: Icons.location_city),
             const SizedBox(height: 16),
-            _field(_descCtrl, 'Mô tả', Icons.description, required: false, maxLines: 3),
+            AppFormField(controller: _descCtrl, label: 'Mô tả', icon: Icons.description, required: false, maxLines: 3),
             const SizedBox(height: 16),
             if (_isEdit) ...[
               DropdownButtonFormField<String>(
@@ -128,40 +126,12 @@ class _PropertyFormScreenState extends State<PropertyFormScreen> {
               const SizedBox(height: 16),
             ],
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity, height: 52,
-              child: ElevatedButton(
-                onPressed: _isSaving ? null : _save,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSaving
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(_isEdit ? 'CẬP NHẬT' : 'THÊM TÒA NHÀ',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
+            AppSaveButton(
+              label: _isEdit ? 'CẬP NHẬT' : 'THÊM TÒA NHÀ',
+              isLoading: _isSaving,
+              onPressed: _save,
             ),
           ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _field(TextEditingController ctrl, String label, IconData icon,
-      {bool required = true, int maxLines = 1}) {
-    return TextFormField(
-      controller: ctrl,
-      maxLines: maxLines,
-      validator: required ? (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null : null,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppColors.primary),
-        filled: true, fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
       ),
     );

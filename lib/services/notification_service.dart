@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/notification_model.dart';
+import 'interfaces/i_notification_service.dart';
 
 // Handler cho background message (phải là top-level function)
 @pragma('vm:entry-point')
@@ -9,7 +10,7 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Firebase đã được init trước đó, chỉ cần xử lý message
 }
 
-class NotificationService {
+class NotificationService implements INotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();

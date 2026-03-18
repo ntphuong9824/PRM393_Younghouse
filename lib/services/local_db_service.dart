@@ -52,16 +52,6 @@ class LocalDbService {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS guardians (
-        id TEXT PRIMARY KEY,
-        user_id TEXT,
-        full_name TEXT,
-        phone TEXT,
-        relationship TEXT
-      )
-    ''');
-
-    await db.execute('''
       CREATE TABLE IF NOT EXISTS properties (
         id TEXT PRIMARY KEY,
         landlord_id TEXT,
@@ -279,5 +269,10 @@ class LocalDbService {
   Future<void> markSynced(String table, String id) async {
     final db = await database;
     await db.update(table, {'is_synced': 1}, where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<void> updateFields(String table, String id, Map<String, dynamic> fields) async {
+    final db = await database;
+    await db.update(table, fields, where: 'id = ?', whereArgs: [id]);
   }
 }
