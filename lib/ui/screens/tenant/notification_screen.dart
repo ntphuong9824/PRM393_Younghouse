@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme/app_colors.dart';
-import '../../models/notification_model.dart';
-import '../../providers/notification_provider.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../models/notification_model.dart';
+import '../../../providers/notification_provider.dart';
 
 class NotificationScreen extends StatefulWidget {
   final String userId;

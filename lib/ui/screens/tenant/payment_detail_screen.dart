@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../core/theme/app_colors.dart';
-import '../../models/invoice_model.dart';
-import '../../services/payos_service.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../models/invoice_model.dart';
+import '../../../services/payos_service.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
   final InvoiceModel invoice;

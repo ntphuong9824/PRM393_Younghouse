@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/chat_provider.dart';
-import '../admin_send_notification_screen.dart';
+import '../login_screen.dart';
 import 'admin_chat_list_screen.dart';
+import 'admin_send_notification_screen.dart';
 import 'property_list_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -43,7 +44,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Đăng xuất',
-            onPressed: () => Navigator.popUntil(context, (r) => r.isFirst),
+            onPressed: () => Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            ),
           ),
         ],
       ),

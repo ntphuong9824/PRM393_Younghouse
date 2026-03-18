@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../core/theme/app_colors.dart';
-import '../core/utils/date_formatter.dart';
-import '../models/message_model.dart';
-import '../providers/chat_provider.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/date_formatter.dart';
+import '../../models/message_model.dart';
+import '../../providers/chat_provider.dart';
 
 /// Màn hình chat dùng chung cho cả tenant và admin
 class ChatScreen extends StatefulWidget {

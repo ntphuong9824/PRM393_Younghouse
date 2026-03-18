@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../core/theme/app_colors.dart';
-import '../../services/auth_service.dart';
-import 'login_screen.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../services/auth_service.dart';
+import '../login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;

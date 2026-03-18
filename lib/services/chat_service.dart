@@ -46,20 +46,34 @@ class ChatService implements IChatService {
   Stream<List<MessageModel>> streamMessages(String chatRoomId) {
     return _messages
         .where('chat_room_id', isEqualTo: chatRoomId)
-        .orderBy('sent_at', descending: false)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => MessageModel.fromFirestore(d)).toList());
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => MessageModel.fromFirestore(d))
+              .toList();
+          // Sort ở client, tránh cần Firestore composite index
+          list.sort((a, b) => a.sentAt.compareTo(b.sentAt));
+          return list;
+        });
   }
 
   @override
   Stream<List<ChatRoomModel>> streamChatRooms(String landlordId) {
     return _rooms
         .where('landlord_id', isEqualTo: landlordId)
-        .orderBy('last_message_at', descending: true)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => ChatRoomModel.fromFirestore(d)).toList());
+        .map((snap) {
+          final list = snap.docs
+              .map((d) => ChatRoomModel.fromFirestore(d))
+              .toList();
+          // Sort theo tin nhắn mới nhất, null xuống cuối
+          list.sort((a, b) {
+            if (a.lastMessageAt == null) return 1;
+            if (b.lastMessageAt == null) return -1;
+            return b.lastMessageAt!.compareTo(a.lastMessageAt!);
+          });
+          return list;
+        });
   }
 
   @override

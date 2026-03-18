@@ -1,64 +1,99 @@
-Firestore rules:
 rules_version = '2';
 service cloud.firestore {
-  match /databases/{database}/documents {
+match /databases/{database}/documents {
+
+    // ===== FUNCTIONS =====
     function signedIn() {
       return request.auth != null;
     }
 
-    function isAdmin() {
-      return signedIn() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function isAdmin() {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        userDoc().data.role == "admin";
+    }
+
+    // ===== USERS =====
     match /users/{uid} {
       allow create: if signedIn() && request.auth.uid == uid;
       allow read, update: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
+    // ===== AVATARS =====
     match /avatars/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
     }
 
-    // Top-level guardians collection
+    // ===== GUARDIANS =====
     match /guardians/{guardianId} {
-      allow read, write: if isAdmin() ||
-        (signedIn() && resource.data.user_id == request.auth.uid) ||
-        (signedIn() && request.resource.data.user_id == request.auth.uid);
+      allow create: if signedIn() &&
+        request.resource.data.user_id == request.auth.uid;
+
+      allow read: if isAdmin() ||
+        (signedIn() && resource.data.user_id == request.auth.uid);
+
+      allow update, delete: if isAdmin() ||
+        (signedIn() && resource.data.user_id == request.auth.uid);
     }
 
-    // Subcollection guardians dưới users
+    // Subcollection guardians
     match /users/{uid}/guardians/{guardianId} {
       allow read, write: if isAdmin() || (signedIn() && request.auth.uid == uid);
     }
 
+    // ===== NOTIFICATIONS =====
     match /notifications/{id} {
-      // admin xem/gửi toàn bộ
-      allow read, create: if isAdmin();
+      allow create: if isAdmin();
 
-      // tenant chỉ đọc broadcast hoặc thông báo gửi riêng cho chính mình
-      allow read: if signedIn() &&
-        (resource.data.targetUserId == null || resource.data.targetUserId == request.auth.uid);
+      allow read: if isAdmin() || (
+        signedIn() &&
+        (resource.data.targetUserId == null ||
+         resource.data.targetUserId == request.auth.uid)
+      );
 
-      // cho user tự mark đã đọc, admin có toàn quyền update
       allow update: if isAdmin() || (
         signedIn() &&
         request.resource.data.diff(resource.data).changedKeys().hasOnly(['readBy']) &&
         request.resource.data.readBy.hasAll(resource.data.readBy) &&
         request.resource.data.readBy.hasAny([request.auth.uid])
       );
-    }
-  }
-}
 
-realtimedatabase rules:
-{
-  "rules": {
-    "users": {
-      "$uid": {
-        ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth != null && auth.uid == $uid"
-      }
+      allow delete: if isAdmin();
     }
-  }
+
+    // ===== ROOMS =====
+    match /rooms/{id} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ===== CHAT ROOMS =====
+    match /chat_rooms/{id} {
+      allow read, write: if signedIn();
+    }
+
+    // ===== CONTRACTS =====
+    match /contracts/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== INVOICES =====
+    match /invoices/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ===== PAYMENTS =====
+    match /payments/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+}
 }

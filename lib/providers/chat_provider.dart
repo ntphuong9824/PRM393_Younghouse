@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../models/chat_room_model.dart';
 import '../models/message_model.dart';
 import '../services/chat_service.dart';
@@ -11,10 +11,17 @@ class ChatProvider extends ChangeNotifier {
   List<ChatRoomModel> _chatRooms = [];
   StreamSubscription? _roomsSub;
 
+  // ── Tenant: unread count ──────────────────────────────────────
+  List<ChatRoomModel> _tenantRooms = [];
+  StreamSubscription? _tenantRoomsSub;
+
   List<ChatRoomModel> get chatRooms => _chatRooms;
 
   int get totalUnreadByAdmin =>
       _chatRooms.fold(0, (sum, r) => sum + r.unreadByAdmin);
+
+  int get totalUnreadByTenant =>
+      _tenantRooms.fold(0, (sum, r) => sum + r.unreadByTenant);
 
   void listenChatRooms(String landlordId) {
     _roomsSub?.cancel();
@@ -25,15 +32,13 @@ class ChatProvider extends ChangeNotifier {
   }
 
   void listenChatRoomsForTenant(String tenantId) {
-    _roomsSub?.cancel();
-    _roomsSub = _service.streamChatRoomsForTenant(tenantId).listen((rooms) {
-      _chatRooms = rooms;
+    _tenantRoomsSub?.cancel();
+    _tenantRoomsSub =
+        _service.streamChatRoomsForTenant(tenantId).listen((rooms) {
+      _tenantRooms = rooms;
       notifyListeners();
     });
   }
-
-  int get totalUnreadByTenant =>
-      _chatRooms.fold(0, (sum, r) => sum + r.unreadByTenant);
 
   // ── Messages trong 1 room ────────────────────────────────────
   List<MessageModel> _messages = [];
@@ -43,13 +48,16 @@ class ChatProvider extends ChangeNotifier {
   List<MessageModel> get messages => _messages;
 
   void listenMessages(String chatRoomId) {
-    if (_activeChatRoomId == chatRoomId) return;
-    _activeChatRoomId = chatRoomId;
+    // Luôn re-subscribe để đảm bảo stream active
     _msgSub?.cancel();
+    _activeChatRoomId = chatRoomId;
     _messages = [];
+    notifyListeners();
     _msgSub = _service.streamMessages(chatRoomId).listen((msgs) {
       _messages = msgs;
       notifyListeners();
+    }, onError: (e) {
+      debugPrint('Chat stream error: $e');
     });
   }
 
@@ -92,6 +100,7 @@ class ChatProvider extends ChangeNotifier {
   @override
   void dispose() {
     _roomsSub?.cancel();
+    _tenantRoomsSub?.cancel();
     _msgSub?.cancel();
     super.dispose();
   }

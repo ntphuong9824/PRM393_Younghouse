@@ -176,6 +176,17 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  /// Lấy UID của admin (user có role = 'admin') từ Firestore
+  Future<String?> getAdminUid() async {
+    final snap = await _db
+        .collection('users')
+        .where('role', isEqualTo: 'admin')
+        .limit(1)
+        .get();
+    if (snap.docs.isEmpty) return null;
+    return snap.docs.first.id;
+  }
+
   Future<void> _upsertAdminProfile(User user) async {
 	final now = FieldValue.serverTimestamp();
 	await _db.collection('users').doc(user.uid).set(

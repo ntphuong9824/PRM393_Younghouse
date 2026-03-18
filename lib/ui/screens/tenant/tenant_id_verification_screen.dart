@@ -3,7 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
-import '../../core/theme/app_colors.dart';
+import '../../../core/theme/app_colors.dart';
 import 'main_screen.dart';
 
 class TenantIdVerificationScreen extends StatefulWidget {
