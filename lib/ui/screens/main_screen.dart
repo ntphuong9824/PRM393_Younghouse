@@ -9,6 +9,7 @@ import 'select_invoice_screen.dart';
 import 'create_invoice_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
+import 'profile_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String userId;
@@ -92,6 +93,16 @@ class _MainScreenState extends State<MainScreen> {
           builder: (_) => PaymentHistoryScreen(tenantId: widget.userId),
         ),
       );
+    } else if (index == 3) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ProfileScreen(
+            userId: widget.userId,
+            userName: widget.userName,
+          ),
+        ),
+      );
     }
   }
 
@@ -128,7 +139,17 @@ class _MainScreenState extends State<MainScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(
+                    userId: widget.userId,
+                    userName: widget.userName,
+                  ),
+                ),
+              );
+            },
             icon: const Icon(Icons.person_outline),
           ),
         ],
