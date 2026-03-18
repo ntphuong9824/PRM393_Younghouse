@@ -4,7 +4,7 @@ import '../../core/theme/app_colors.dart';
 import '../../models/user_model.dart';
 import '../../models/guardian_model.dart';
 import '../../services/local_db_service.dart';
-import 'main_screen.dart';
+import 'tenant/main_screen.dart';
 
 class ProfileCompletionScreen extends StatefulWidget {
   final String userId;

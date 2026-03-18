@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'admin/admin_dashboard_screen.dart';
-import 'main_screen.dart';
+import 'tenant/main_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {

@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/property_model.dart';
 import '../models/room_model.dart';
-import 'interfaces/i_property_service.dart';
+import '../core/interfaces/i_property_service.dart';
 import 'local_db_service.dart';
 
 class PropertyService implements IPropertyService {

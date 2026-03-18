@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
-import 'main_screen.dart';
+import 'tenant/main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

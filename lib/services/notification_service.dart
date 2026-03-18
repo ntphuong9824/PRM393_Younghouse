@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/notification_model.dart';
-import 'interfaces/i_notification_service.dart';
+import '../core/interfaces/i_notification_service.dart';
 
 // Handler cho background message (phải là top-level function)
 @pragma('vm:entry-point')

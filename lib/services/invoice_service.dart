@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/invoice_model.dart';
-import 'interfaces/i_invoice_service.dart';
+import '../core/interfaces/i_invoice_service.dart';
 import 'local_db_service.dart';
 
 class InvoiceService implements IInvoiceService {

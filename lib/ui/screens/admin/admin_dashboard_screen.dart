@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
-import '../admin_send_notification_screen.dart';
+import 'admin_send_notification_screen.dart';
 import 'property_list_screen.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
