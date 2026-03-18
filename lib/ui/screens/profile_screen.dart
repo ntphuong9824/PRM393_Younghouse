@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'login_screen.dart';
@@ -21,6 +23,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   Map<String, dynamic>? _userProfile;
+  List<Map<String, dynamic>> _guardians = [];
   bool _isLoading = true;
 
   @override
@@ -34,8 +37,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final profile = await _authService.getOrCreateUserProfile(user);
+        final guardiansSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .collection('guardians')
+            .get();
         setState(() {
           _userProfile = profile;
+          _guardians = guardiansSnap.docs.map((d) => d.data()).toList();
           _isLoading = false;
         });
       }
@@ -189,6 +198,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 32),
 
+                  // Guardian Card
+                  if (_guardians.isNotEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Người giám hộ',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          ..._guardians.map((g) => _buildGuardianItem(g)),
+                        ],
+                      ),
+                    ),
+
+                  const SizedBox(height: 32),
+
                   // Logout Button
                   SizedBox(
                     width: double.infinity,
@@ -214,6 +258,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildGuardianItem(Map<String, dynamic> guardian) {
+    final relationship = guardian['relationship'] == 'bo' ? 'Bố' : 'Mẹ';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            relationship,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          _buildInfoRow('Họ tên', guardian['full_name'] ?? 'N/A'),
+          const SizedBox(height: 4),
+          _buildInfoRow('Số điện thoại', guardian['phone'] ?? 'N/A'),
+        ],
+      ),
     );
   }
 
@@ -270,14 +338,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showCccdImages() {
-    final frontUrl = _userProfile?['id_front_url'];
-    final backUrl = _userProfile?['id_back_url'];
+    final frontUrl = _userProfile?['id_front_url'] as String?;
+    final backUrl = _userProfile?['id_back_url'] as String?;
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -292,12 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    frontUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        const Text('Không tải được ảnh'),
-                  ),
+                  child: _buildCccdImage(frontUrl),
                 ),
                 const SizedBox(height: 16),
               ],
@@ -306,12 +369,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    backUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        const Text('Không tải được ảnh'),
-                  ),
+                  child: _buildCccdImage(backUrl),
                 ),
               ],
               if (frontUrl == null && backUrl == null)
@@ -326,6 +384,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildCccdImage(String url) {
+    try {
+      if (url.startsWith('data:image')) {
+        // base64 data URL: "data:image/jpeg;base64,<data>"
+        final base64Str = url.split(',').last;
+        final bytes = base64Decode(base64Str);
+        return Image.memory(bytes, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Text('Không tải được ảnh'));
+      } else {
+        return Image.network(url, fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const Text('Không tải được ảnh'));
+      }
+    } catch (_) {
+      return const Text('Không tải được ảnh');
+    }
   }
 
   String _formatDate(dynamic timestamp) {
