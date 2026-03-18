@@ -165,15 +165,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         const SizedBox(height: 16),
                         _buildInfoRow('Email', _userProfile?['email'] ?? 'N/A'),
                         const SizedBox(height: 12),
-                        _buildInfoRow('Số điện thoại',
-                            _userProfile?['phone'] ?? 'N/A'),
+                        _buildInfoRow('Họ và tên', _userProfile?['full_name'] ?? 'N/A'),
+                        const SizedBox(height: 12),
+                        _buildInfoRow('Số điện thoại', _userProfile?['phone'] ?? 'N/A'),
                         const SizedBox(height: 12),
                         _buildInfoRow(
-                          'Vai trò',
-                          (_userProfile?['role'] ?? 'tenant') == 'admin'
-                              ? 'Chủ nhà'
-                              : 'Người thuê',
+                          'Ngày sinh',
+                          _userProfile?['date_of_birth'] != null
+                              ? _formatDate(_userProfile!['date_of_birth'])
+                              : 'N/A',
                         ),
+                        const SizedBox(height: 12),
+                        _buildIdNumberRow(_userProfile?['id_number'] ?? 'N/A'),
                         const SizedBox(height: 12),
                         _buildInfoRow(
                           'Trạng thái xác nhận',
@@ -220,10 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
         ),
         Text(
           value,
@@ -235,6 +235,111 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildIdNumberRow(String idNumber) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Số CCCD',
+          style: TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+        GestureDetector(
+          onTap: idNumber != 'N/A' ? _showCccdImages : null,
+          child: Row(
+            children: [
+              Text(
+                idNumber,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: idNumber != 'N/A' ? AppColors.primary : AppColors.textDark,
+                  decoration: idNumber != 'N/A' ? TextDecoration.underline : null,
+                ),
+              ),
+              if (idNumber != 'N/A') ...[
+                const SizedBox(width: 4),
+                const Icon(Icons.image_outlined, size: 16, color: AppColors.primary),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showCccdImages() {
+    final frontUrl = _userProfile?['id_front_url'];
+    final backUrl = _userProfile?['id_back_url'];
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Ảnh CCCD',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              if (frontUrl != null) ...[
+                const Text('Mặt trước', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    frontUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Text('Không tải được ảnh'),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (backUrl != null) ...[
+                const Text('Mặt sau', style: TextStyle(color: Colors.grey)),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    backUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) =>
+                        const Text('Không tải được ảnh'),
+                  ),
+                ),
+              ],
+              if (frontUrl == null && backUrl == null)
+                const Text('Chưa có ảnh CCCD'),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Đóng'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(dynamic timestamp) {
+    try {
+      DateTime date;
+      if (timestamp is DateTime) {
+        date = timestamp;
+      } else {
+        date = (timestamp as dynamic).toDate();
+      }
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    } catch (_) {
+      return 'N/A';
+    }
   }
 }
 

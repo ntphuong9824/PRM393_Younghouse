@@ -25,6 +25,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _fullNameController = TextEditingController();
   final _dobController = TextEditingController();
   final _idNumberController = TextEditingController();
+  DateTime? _selectedDob;
 
   // Người giám hộ
   final _fatherNameController = TextEditingController();
@@ -33,6 +34,29 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _motherPhoneController = TextEditingController();
 
   bool _isSaving = false;
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
+  }
+
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDob ?? DateTime(now.year - 18, now.month, now.day),
+      firstDate: DateTime(1900),
+      lastDate: now,
+    );
+
+    if (picked == null) return;
+
+    setState(() {
+      _selectedDob = picked;
+      _dobController.text = _formatDate(picked);
+    });
+  }
 
   @override
   void dispose() {
@@ -52,15 +76,6 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
     try {
       final now = DateTime.now();
-      DateTime? dob;
-      try {
-        final parts = _dobController.text.split('/');
-        if (parts.length == 3) {
-          dob = DateTime(
-              int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
-        }
-      } catch (_) {}
-
       final user = UserModel(
         id: widget.userId,
         email: '',
@@ -68,7 +83,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         fullName: _fullNameController.text.trim(),
         role: 'tenant',
         idNumber: _idNumberController.text.trim(),
-        dateOfBirth: dob,
+        dateOfBirth: _selectedDob,
         isProfileConfirmed: false,
         createdAt: now,
         updatedAt: now,
@@ -180,8 +195,32 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
               const SizedBox(height: 16),
               _field(_fullNameController, "Họ và tên", Icons.person),
               const SizedBox(height: 16),
-              _field(_dobController, "Ngày sinh", Icons.calendar_today,
-                  hint: "DD/MM/YYYY"),
+              TextFormField(
+                controller: _dobController,
+                readOnly: true,
+                onTap: _pickDob,
+                validator: (_) =>
+                    _selectedDob == null ? 'Vui lòng chọn Ngày sinh' : null,
+                decoration: InputDecoration(
+                  labelText: 'Ngày sinh',
+                  hintText: 'Chọn ngày sinh',
+                  prefixIcon: const Icon(
+                    Icons.calendar_today,
+                    color: AppColors.primary,
+                    size: 22,
+                  ),
+                  suffixIcon: const Icon(Icons.arrow_drop_down),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade200),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               _field(_idNumberController, "Số CCCD/CMND", Icons.badge),
 
