@@ -12,8 +12,8 @@
 | landlord_id | String | FK → users.id (nếu là tenant, trỏ về admin quản lý) |
 | date_of_birth | Timestamp | |
 | id_number | String | Số CCCD/CMND |
-| id_front_url | String | Ảnh mặt trước CCCD |
-| id_back_url | String | Ảnh mặt sau CCCD |
+| id_front_url | String | Ảnh mặt trước CCCD (base64 data URL: `data:image/jpeg;base64,...`) |
+| id_back_url | String | Ảnh mặt sau CCCD (base64 data URL: `data:image/jpeg;base64,...`) |
 | is_profile_confirmed | Boolean | Admin xác nhận hồ sơ |
 | fcm_token | String | Firebase Cloud Messaging token |
 | created_at | Timestamp | |
@@ -21,16 +21,31 @@
 
 ---
 
-## 2. guardians (Người giám hộ)
+## 2. guardians (Người giám hộ) - Top-level collection
 | Field | Type | Note |
 |-------|------|------|
-| id | String | PK |
+| id | String | PK Format: `{userId}_father` or `{userId}_mother` |
+| user_id | String | FK → users.id |
+| full_name | String | Họ tên người giám hộ |
+| phone | String | Số điện thoại (9-11 digits) |
+| relationship | String | Quan hệ: `bo` (bố), `me` (mẹ) |
+
+**Note:** Guardian records are also stored in subcollection `users/{userId}/guardians` for backup/query purposes.
+
+---
+
+## 2.1 users/{userId}/guardians (Subcollection)
+| Field | Type | Note |
+|-------|------|------|
+| id | String | Same as top-level: `{userId}_father` or `{userId}_mother` |
 | user_id | String | FK → users.id |
 | full_name | String | Họ tên người giám hộ |
 | phone | String | Số điện thoại |
-| relationship | String | Quan hệ: bố, mẹ, anh, chị... |
+| relationship | String | `bo` hoặc `me` |
 
----
+**Dual storage reason:** Ensures flexibility in querying:
+- Query all tenants' guardians via top-level collection
+- Query specific tenant's guardians via subcollection
 
 ## 3. properties (Tòa nhà)
 | Field | Type | Note |
