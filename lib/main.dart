@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/notification_provider.dart';
 import 'providers/property_provider.dart';
+import 'providers/chat_provider.dart';
 import 'services/notification_service.dart';
 import 'ui/screens/splash_screen.dart';
 
@@ -33,6 +34,7 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => PropertyProvider()),
+        ChangeNotifierProvider(create: (_) => ChatProvider()),
       ],
       child: MaterialApp(
         title: 'Young House',

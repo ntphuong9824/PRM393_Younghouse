@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/chat_provider.dart';
 import '../../services/invoice_service.dart';
 import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
@@ -36,6 +37,8 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().listenToNotifications(widget.userId);
+      // Listen chat rooms để hiện badge unread
+      context.read<ChatProvider>().listenChatRoomsForTenant(widget.userId);
     });
   }
 
@@ -84,8 +87,15 @@ class _MainScreenState extends State<MainScreen> {
   void _onBottomNavTap(int index) {
     setState(() => _selectedIndex = index);
     if (index == 1) {
-      Navigator.push(context,
-          MaterialPageRoute(builder: (_) => const ChatSupportScreen()));
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatSupportScreen(
+            userId: widget.userId,
+            userName: widget.userName,
+          ),
+        ),
+      );
     } else if (index == 2) {
       Navigator.push(
         context,
@@ -229,20 +239,33 @@ class _MainScreenState extends State<MainScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onBottomNavTap,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Trang chủ'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_outline), label: 'Hỗ trợ'),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Lịch sử'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Tài khoản'),
-        ],
+      bottomNavigationBar: Consumer<ChatProvider>(
+        builder: (context, chatProvider, _) {
+          final unreadChat = chatProvider.totalUnreadByTenant;
+          return BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onBottomNavTap,
+            type: BottomNavigationBarType.fixed,
+            selectedItemColor: AppColors.primary,
+            unselectedItemColor: Colors.grey,
+            items: [
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.home), label: 'Trang chủ'),
+              BottomNavigationBarItem(
+                icon: Badge(
+                  isLabelVisible: unreadChat > 0,
+                  label: Text('$unreadChat'),
+                  child: const Icon(Icons.chat_bubble_outline),
+                ),
+                label: 'Hỗ trợ',
+              ),
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.history), label: 'Lịch sử'),
+              const BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline), label: 'Tài khoản'),
+            ],
+          );
+        },
       ),
     );
   }
