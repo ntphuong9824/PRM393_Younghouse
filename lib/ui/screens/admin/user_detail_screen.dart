@@ -5,6 +5,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../models/user_model.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/notification_service.dart';
 
 class UserDetailScreen extends StatefulWidget {
   final UserModel user;
@@ -30,6 +31,12 @@ class _UserDetailScreenState extends State<UserDetailScreen> {
     setState(() => _isConfirming = true);
     try {
       await _authService.confirmUserProfile(widget.user.id);
+      await NotificationService().sendNotification(
+        targetUserId: widget.user.id,
+        title: 'Hồ sơ đã được xác nhận',
+        message:
+            'Hồ sơ của bạn đã được admin xác nhận. Bạn có thể chỉnh sửa thông tin cá nhân.',
+      );
       if (mounted) {
         setState(() => _isConfirmed = true);
         ScaffoldMessenger.of(context).showSnackBar(
