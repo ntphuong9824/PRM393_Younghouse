@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/invoice_model.dart';
 import '../../../services/invoice_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../services/payos_service.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class PaymentDetailScreen extends StatefulWidget {
 class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   final PayosService _payosService = PayosService();
   final InvoiceService _invoiceService = InvoiceService();
+  final NotificationService _notificationService = NotificationService();
   bool _isLoading = false;
   late InvoiceModel _invoice;
   StreamSubscription<Uri>? _linkSub;
@@ -52,6 +54,23 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
     setState(() => _isLoading = true);
     try {
       await _invoiceService.markAsPaid(_invoice.id);
+
+      // Gửi thông báo thanh toán thành công
+      final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+      await _notificationService.sendNotification(
+        title: 'Thanh toán thành công',
+        message:
+            'Hoá đơn tháng ${_invoice.month}/${_invoice.year} - ${fmt.format(_invoice.totalAmount)} đã được thanh toán.',
+        targetUserId: _invoice.tenantId,
+        metadata: {'invoiceId': _invoice.id, 'type': 'payment_success'},
+      );
+
+      // Hiện local notification ngay lập tức
+      await _notificationService.showLocalNotification(
+        title: 'Thanh toán thành công',
+        body:
+            'Hoá đơn tháng ${_invoice.month}/${_invoice.year} - ${fmt.format(_invoice.totalAmount)} đã được thanh toán.',
+      );
       if (!mounted) return;
       setState(() {
         _invoice = InvoiceModel(

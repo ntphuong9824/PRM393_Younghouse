@@ -80,6 +80,28 @@ class NotificationService implements INotificationService {
     );
   }
 
+  /// Hiện local notification ngay lập tức (không cần FCM)
+  Future<void> showLocalNotification({
+    required String title,
+    required String body,
+  }) async {
+    await _localNotifications.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      title,
+      body,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channel.id,
+          _channel.name,
+          channelDescription: _channel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+    );
+  }
+
   /// Admin gửi thông báo (lưu vào Firestore)
   Future<void> sendNotification({
     required String title,

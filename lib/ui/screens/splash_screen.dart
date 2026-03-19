@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
+import '../../services/sync_service.dart';
 import 'admin/admin_dashboard_screen.dart';
 import 'login_screen.dart';
 import 'profile_completion_screen.dart';
@@ -35,6 +36,15 @@ class _SplashScreenState extends State<SplashScreen> {
       final profile = await authService.getOrCreateUserProfile(user);
       final role = (profile['role'] as String?) ?? 'tenant';
       final fullName = (profile['full_name'] as String?)?.trim();
+
+      // Pull data từ Firestore về SQLite sau khi login
+      final sync = SyncService();
+      if (role == 'admin') {
+        sync.pullForLandlord(user.uid).catchError((_) {});
+      } else {
+        sync.pullForTenant(user.uid).catchError((_) {});
+      }
+      sync.pushUnsynced().catchError((_) {});
 
       if (!mounted) return;
 

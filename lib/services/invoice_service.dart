@@ -100,29 +100,52 @@ class InvoiceService implements IInvoiceService {
 
   /// Lấy hoá đơn theo landlord
   Future<List<InvoiceModel>> getInvoicesByLandlord(String landlordId) async {
+    // Luôn pull từ Firestore trước để đảm bảo data mới nhất
+    try {
+      final remote = await _col
+          .where('landlord_id', isEqualTo: landlordId)
+          .orderBy('year', descending: true)
+          .orderBy('month', descending: true)
+          .get();
+      if (remote.docs.isNotEmpty) {
+        final list = remote.docs.map(InvoiceModel.fromFirestore).toList();
+        for (final inv in list) {
+          await _local.upsert('invoices', inv.toSqlite()..['is_synced'] = 1);
+        }
+        return list;
+      }
+    } catch (_) {
+      // Offline: fallback về SQLite
+    }
+    // Fallback SQLite khi offline
     final rows = await _local.getAll('invoices',
         where: 'landlord_id = ?',
         whereArgs: [landlordId],
         orderBy: 'year DESC, month DESC');
-    if (rows.isNotEmpty) {
-      return rows.map((r) => InvoiceModel.fromSqlite(r)).toList();
-    }
-    // Fallback to Firestore if local is empty
-    final remote = await _col
-        .where('landlord_id', isEqualTo: landlordId)
-        .orderBy('year', descending: true)
-        .orderBy('month', descending: true)
-        .get();
-    final list = remote.docs.map(InvoiceModel.fromFirestore).toList();
-    for (final inv in list) {
-      await _local.upsert('invoices', inv.toSqlite());
-    }
-    return list;
+    return rows.map((r) => InvoiceModel.fromSqlite(r)).toList();
   }
 
   /// Lấy hoá đơn theo tenant
   @override
   Future<List<InvoiceModel>> getInvoicesByTenant(String tenantId) async {
+    // Luôn pull từ Firestore trước để đảm bảo data mới nhất
+    try {
+      final remote = await _col
+          .where('tenant_id', isEqualTo: tenantId)
+          .orderBy('year', descending: true)
+          .orderBy('month', descending: true)
+          .get();
+      if (remote.docs.isNotEmpty) {
+        final list = remote.docs.map(InvoiceModel.fromFirestore).toList();
+        for (final inv in list) {
+          await _local.upsert('invoices', inv.toSqlite()..['is_synced'] = 1);
+        }
+        return list;
+      }
+    } catch (_) {
+      // Offline: fallback về SQLite
+    }
+    // Fallback SQLite khi offline
     final rows = await _local.getAll('invoices',
         where: 'tenant_id = ?',
         whereArgs: [tenantId],
