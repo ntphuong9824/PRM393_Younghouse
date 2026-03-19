@@ -20,7 +20,7 @@ class UserManagementScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Quan ly nguoi dung',
+          'Quản lý người dùng',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -36,7 +36,7 @@ class UserManagementScreen extends StatelessWidget {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.person_add),
-        label: const Text('Tao tai khoan'),
+        label: const Text('Tạo tài khoản'),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: authService.streamAllTenants(),
@@ -50,7 +50,7 @@ class UserManagementScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Khong tai duoc danh sach user: ${snapshot.error}',
+                  'Không tải được danh sách user: ${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -81,7 +81,7 @@ class UserManagementScreen extends StatelessWidget {
             });
           if (docs.isEmpty) {
             return const Center(
-              child: Text('Chua co tai khoan tenant nao'),
+              child: Text('Chưa có tài khoản tenant nào'),
             );
           }
 
@@ -115,7 +115,7 @@ class UserManagementScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            (name == null || name.isEmpty) ? 'Nguoi dung' : name,
+                            (name == null || name.isEmpty) ? 'Người dùng' : name,
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
@@ -128,7 +128,7 @@ class UserManagementScreen extends StatelessWidget {
                             Text('Email: $email'),
                           const SizedBox(height: 4),
                           Text(
-                            isConfirmed ? 'Ho so: da xac nhan' : 'Ho so: cho xac nhan',
+                            isConfirmed ? 'Hồ sơ: đã xác nhận' : 'Hồ sơ: chờ xác nhận',
                             style: TextStyle(
                               fontSize: 12,
                               color: isConfirmed ? Colors.green : Colors.orange,

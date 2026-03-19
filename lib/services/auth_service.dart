@@ -40,7 +40,7 @@ class AuthService {
 	if (normalizedEmail != defaultAdminEmail || password != defaultAdminPassword) {
 	  throw FirebaseAuthException(
 		code: 'invalid-credential',
-		message: 'Thong tin dang nhap admin khong hop le.',
+		message: 'Thông tin đăng nhập admin không hợp lệ.',
 	  );
 	}
 
@@ -201,7 +201,7 @@ class AuthService {
 	final data = <String, dynamic>{
 	  'email': user.email ?? '',
 	  'phone': user.phoneNumber ?? '',
-	  'full_name': user.displayName ?? (user.email?.split('@').first ?? 'Nguoi dung'),
+	  'full_name': user.displayName ?? (user.email?.split('@').first ?? 'Người dùng'),
 	  'role': 'tenant',
 	  'is_profile_confirmed': false,
 	  'created_at': FieldValue.serverTimestamp(),
@@ -262,7 +262,7 @@ class AuthService {
 	  {
 		'email': user.email ?? defaultAdminEmail,
 		'phone': user.phoneNumber ?? '',
-		'full_name': user.displayName ?? 'Quan tri vien',
+		'full_name': user.displayName ?? 'Quản trị viên',
 		'role': 'admin',
 		'is_profile_confirmed': true,
 		'created_at': now,

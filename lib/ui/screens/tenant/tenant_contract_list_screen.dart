@@ -29,11 +29,11 @@ class TenantContractListScreen extends StatelessWidget {
   String _statusLabel(String status) {
     switch (status) {
       case 'active':
-        return 'Dang hieu luc';
+        return 'Đang hiệu lực';
       case 'terminated':
-        return 'Da cham dut';
+        return 'Đã chấm dứt';
       case 'expired':
-        return 'Het han';
+        return 'Hết hạn';
       default:
         return status;
     }
@@ -53,7 +53,7 @@ class TenantContractListScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Hop dong cua toi',
+          'Hợp đồng của tôi',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -71,7 +71,7 @@ class TenantContractListScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  'Khong tai duoc danh sach hop dong: ${snapshot.error}',
+                  'Không tải được danh sách hợp đồng: ${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -81,7 +81,7 @@ class TenantContractListScreen extends StatelessWidget {
           final contracts = snapshot.data ?? const <ContractModel>[];
           if (contracts.isEmpty) {
             return const Center(
-              child: Text('Ban chua co hop dong nao'),
+              child: Text('Bạn chưa có hợp đồng nào'),
             );
           }
 
@@ -117,7 +117,7 @@ class TenantContractListScreen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: Text(
-                              'Hop dong: ${contract.id}',
+                              'Hợp đồng: ${contract.id}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                               ),
@@ -144,9 +144,9 @@ class TenantContractListScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      Text('Phong: ${contract.roomId}'),
-                      Text('Tu ngay: ${_formatDate(contract.startDate)}'),
-                      Text('Den ngay: ${_formatDate(contract.endDate)}'),
+                      Text('Phòng: ${contract.roomId}'),
+                      Text('Từ ngày: ${_formatDate(contract.startDate)}'),
+                      Text('Đến ngày: ${_formatDate(contract.endDate)}'),
                     ],
                   ),
                 ),

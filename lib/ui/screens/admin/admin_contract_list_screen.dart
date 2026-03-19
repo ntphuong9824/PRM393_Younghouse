@@ -49,11 +49,11 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
   String _statusLabel(String status) {
     switch (status) {
       case 'active':
-        return 'Dang hieu luc';
+        return 'Đang hiệu lực';
       case 'terminated':
-        return 'Da cham dut';
+        return 'Đã chấm dứt';
       case 'expired':
-        return 'Het han';
+        return 'Hết hạn';
       default:
         return status;
     }
@@ -64,18 +64,18 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Cham dut hop dong'),
+        title: const Text('Chấm dứt hợp đồng'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Nhap ly do cham dut hop dong:'),
+            const Text('Nhập lý do chấm dứt hợp đồng:'),
             const SizedBox(height: 10),
             TextField(
               controller: reasonCtrl,
               maxLines: 3,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
-                hintText: 'Vi du: Het nhu cau thue phong',
+                hintText: 'Ví dụ: Hết nhu cầu thuê phòng',
               ),
             ),
           ],
@@ -83,19 +83,19 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Huy'),
+            child: const Text('Huỷ'),
           ),
           TextButton(
             onPressed: () {
               if (reasonCtrl.text.trim().isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Vui long nhap ly do cham dut')),
+                  const SnackBar(content: Text('Vui lòng nhập lý do chấm dứt')),
                 );
                 return;
               }
               Navigator.pop(ctx, true);
             },
-            child: const Text('Cham dut', style: TextStyle(color: Colors.red)),
+            child: const Text('Chấm dứt', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -114,12 +114,12 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cham dut hop dong thanh cong')),
+        const SnackBar(content: Text('Chấm dứt hợp đồng thành công')),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong cham dut duoc hop dong: $e')),
+        SnackBar(content: Text('Không chấm dứt được hợp đồng: $e')),
       );
     } finally {
       reasonCtrl.dispose();
@@ -132,7 +132,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Danh sach hop dong',
+          'Danh sách hợp đồng',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -148,7 +148,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
-        label: const Text('Tao hop dong'),
+        label: const Text('Tạo hợp đồng'),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
         stream: _service.streamContractsByLandlord(widget.landlordId),
@@ -162,7 +162,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20),
                 child: Text(
-                  'Khong tai duoc danh sach hop dong: ${snapshot.error}',
+                  'Không tải được danh sách hợp đồng: ${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -179,7 +179,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
             });
 
           if (docs.isEmpty) {
-            return const Center(child: Text('Chua co hop dong nao'));
+            return const Center(child: Text('Chưa có hợp đồng nào'));
           }
 
           return ListView.separated(
@@ -207,7 +207,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            'Hop dong: ${doc.id}',
+                            'Hợp đồng: ${doc.id}',
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -231,10 +231,10 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
                     const SizedBox(height: 10),
                     Text('Room: $roomId'),
                     Text('Tenant: $tenantId'),
-                    Text('Tu ngay: ${_formatDate(data['start_date'])}'),
-                    Text('Den ngay: ${_formatDate(data['end_date'])}'),
+                    Text('Từ ngày: ${_formatDate(data['start_date'])}'),
+                    Text('Đến ngày: ${_formatDate(data['end_date'])}'),
                     if ((data['termination_reason'] as String?)?.trim().isNotEmpty == true)
-                      Text('Ly do cham dut: ${data['termination_reason']}'),
+                      Text('Lý do chấm dứt: ${data['termination_reason']}'),
                     const SizedBox(height: 10),
                     if (status == 'active')
                       Align(
@@ -243,7 +243,7 @@ class _AdminContractListScreenState extends State<AdminContractListScreen> {
                           onPressed: () => _confirmTerminate(doc.id),
                           icon: const Icon(Icons.cancel, color: Colors.red),
                           label: const Text(
-                            'Cham dut hop dong',
+                            'Chấm dứt hợp đồng',
                             style: TextStyle(color: Colors.red),
                           ),
                         ),

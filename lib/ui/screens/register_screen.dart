@@ -53,7 +53,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tao tai khoan thanh cong')),
+        const SnackBar(content: Text('Tạo tài khoản thành công')),
       );
       Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
@@ -64,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tao tai khoan that bai: $e')),
+        SnackBar(content: Text('Tạo tài khoản thất bại: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -74,15 +74,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
-        return 'Email da ton tai';
+        return 'Email đã tồn tại';
       case 'invalid-email':
-        return 'Email khong hop le';
+        return 'Email không hợp lệ';
       case 'weak-password':
-        return 'Mat khau qua yeu (toi thieu 6 ky tu)';
+        return 'Mật khẩu quá yếu (tối thiểu 6 ký tự)';
       case 'operation-not-allowed':
-        return 'Email/Password chua duoc bat trong Firebase Auth';
+        return 'Email/Password chưa được bật trong Firebase Auth';
       default:
-        return e.message ?? 'Dang ky that bai';
+        return e.message ?? 'Đăng ký thất bại';
     }
   }
 
@@ -91,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Tao tai khoan tenant'),
+        title: const Text('Tạo tài khoản tenant'),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
@@ -105,10 +105,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
             children: [
               TextFormField(
                 controller: _fullNameController,
-                decoration: _inputDecoration('Ho va ten', Icons.person_outline),
+                decoration: _inputDecoration('Họ và tên', Icons.person_outline),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
-                    return 'Vui long nhap ho va ten';
+                    return 'Vui lòng nhập họ và tên';
                   }
                   return null;
                 },
@@ -117,14 +117,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: _inputDecoration('So dien thoai', Icons.phone_android),
+                decoration: _inputDecoration('Số điện thoại', Icons.phone_android),
                 validator: (value) {
                   final phone = value?.trim() ?? '';
-                  if (phone.isEmpty) return 'Vui long nhap so dien thoai';
+                  if (phone.isEmpty) return 'Vui lòng nhập số điện thoại';
 
                   final digits = phone.replaceAll(RegExp(r'\D'), '');
                   if (digits.length < 9 || digits.length > 11) {
-                    return 'So dien thoai khong hop le';
+                    return 'Số điện thoại không hợp lệ';
                   }
                   return null;
                 },
@@ -136,8 +136,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 decoration: _inputDecoration('Email', Icons.email_outlined),
                 validator: (value) {
                   final email = value?.trim() ?? '';
-                  if (email.isEmpty) return 'Vui long nhap email';
-                  if (!email.contains('@')) return 'Email khong hop le';
+                  if (email.isEmpty) return 'Vui lòng nhập email';
+                  if (!email.contains('@')) return 'Email không hợp lệ';
                   return null;
                 },
               ),
@@ -145,11 +145,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: _inputDecoration('Mat khau', Icons.lock_outline),
+                decoration: _inputDecoration('Mật khẩu', Icons.lock_outline),
                 validator: (value) {
                   final pwd = value ?? '';
-                  if (pwd.isEmpty) return 'Vui long nhap mat khau';
-                  if (pwd.length < 6) return 'Mat khau toi thieu 6 ky tu';
+                  if (pwd.isEmpty) return 'Vui lòng nhập mật khẩu';
+                  if (pwd.length < 6) return 'Mật khẩu tối thiểu 6 ký tự';
                   return null;
                 },
               ),
@@ -157,11 +157,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
               TextFormField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: _inputDecoration('Nhap lai mat khau', Icons.lock_reset),
+                decoration: _inputDecoration('Nhập lại mật khẩu', Icons.lock_reset),
                 validator: (value) {
-                  if ((value ?? '').isEmpty) return 'Vui long nhap lai mat khau';
+                  if ((value ?? '').isEmpty) return 'Vui lòng nhập lại mật khẩu';
                   if (value != _passwordController.text) {
-                    return 'Mat khau xac nhan khong khop';
+                    return 'Mật khẩu xác nhận không khớp';
                   }
                   return null;
                 },
@@ -186,7 +186,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                       )
                     : const Text(
-                        'TAO TAI KHOAN',
+                        'TẠO TÀI KHOẢN',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

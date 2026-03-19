@@ -5,6 +5,7 @@ import '../../../providers/chat_provider.dart';
 import '../login_screen.dart';
 import 'admin_chat_list_screen.dart';
 import 'admin_contract_list_screen.dart';
+import 'admin_invoice_list_screen.dart';
 import 'admin_send_notification_screen.dart';
 import 'property_list_screen.dart';
 import 'user_management_screen.dart';
@@ -115,8 +116,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               subtitle: 'Tạo & theo dõi hóa đơn',
               icon: Icons.receipt_long,
               color: Colors.purple,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tính năng đang phát triển')),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AdminInvoiceListScreen(landlordId: widget.landlordId),
+                ),
               ),
             ),
           ];
@@ -147,10 +152,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               fontSize: 24,
                               fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
-                      Text('ID: ${widget.landlordId}',
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 13)),
-                    ],
+                      ],
                   ),
                 ),
 

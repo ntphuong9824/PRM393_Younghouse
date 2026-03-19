@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
           builder: (_) => MainScreen(
             userId: user.uid,
             userName: (fullName == null || fullName.isEmpty)
-                ? (user.email ?? user.phoneNumber ?? 'Nguoi dung')
+                ? (user.email ?? user.phoneNumber ?? 'Người dùng')
                 : fullName,
           ),
         ),
@@ -91,7 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui long nhap email va mat khau')),
+        const SnackBar(content: Text('Vui lòng nhập email và mật khẩu')),
       );
       return;
     }
@@ -122,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dang nhap that bai: $e')),
+        SnackBar(content: Text('Đăng nhập thất bại: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -133,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui long nhap so dien thoai')),
+        const SnackBar(content: Text('Vui lòng nhập số điện thoại')),
       );
       return;
     }
@@ -151,7 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _isOtpSent = true;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Da gui ma OTP')),
+        const SnackBar(content: Text('Đã gửi mã OTP')),
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
@@ -161,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gui OTP that bai: $e')),
+        SnackBar(content: Text('Gửi OTP thất bại: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -172,13 +172,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final otp = _otpController.text.trim();
     if ((_verificationId ?? '').isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui long gui ma OTP truoc')),
+        const SnackBar(content: Text('Vui lòng gửi mã OTP trước')),
       );
       return;
     }
     if (otp.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ma OTP khong hop le')),
+        const SnackBar(content: Text('Mã OTP không hợp lệ')),
       );
       return;
     }
@@ -200,7 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dang nhap bang OTP that bai: $e')),
+        SnackBar(content: Text('Đăng nhập bằng OTP thất bại: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -210,34 +210,34 @@ class _LoginScreenState extends State<LoginScreen> {
   String _mapPhoneAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-phone-number':
-        return 'So dien thoai khong hop le';
+        return 'Số điện thoại không hợp lệ';
       case 'invalid-verification-code':
-        return 'Ma OTP khong dung';
+        return 'Mã OTP không đúng';
       case 'session-expired':
-        return 'OTP het han, vui long gui lai';
+        return 'OTP hết hạn, vui lòng gửi lại';
       case 'too-many-requests':
-        return 'Ban thao tac qua nhieu, thu lai sau';
+        return 'Bạn thao tác quá nhiều, thử lại sau';
       case 'operation-not-allowed':
-        return 'Phone Auth chua duoc bat trong Firebase';
+        return 'Phone Auth chưa được bật trong Firebase';
       default:
-        return e.message ?? 'Dang nhap bang so dien thoai that bai';
+        return e.message ?? 'Đăng nhập bằng số điện thoại thất bại';
     }
   }
 
   String _mapAuthError(FirebaseAuthException e) {
     switch (e.code) {
       case 'invalid-email':
-        return 'Email khong hop le';
+        return 'Email không hợp lệ';
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        return 'Thong tin dang nhap khong dung';
+        return 'Thông tin đăng nhập không đúng';
       case 'too-many-requests':
-        return 'Thu lai sau it phut';
+        return 'Thử lại sau ít phút';
       case 'operation-not-allowed':
-        return 'Email/Password chua duoc bat trong Firebase Auth';
+        return 'Email/Password chưa được bật trong Firebase Auth';
       default:
-        return e.message ?? 'Dang nhap that bai';
+        return e.message ?? 'Đăng nhập thất bại';
     }
   }
 
@@ -350,7 +350,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       keyboardType: TextInputType.emailAddress,
                       decoration: InputDecoration(
                         labelText: "Email",
-                        hintText: "Admin: admin@younghouse.app",
                         prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -458,11 +457,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   //     ),
                   // ],
                   ],
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: null,
-                    child: const Text('Tai khoan duoc tao boi quan tri vien'),
-                  ),
                 ],
               ),
             ),

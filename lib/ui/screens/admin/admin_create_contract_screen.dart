@@ -93,14 +93,14 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
       if (bytes.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Khong doc duoc file da chon')),
+          const SnackBar(content: Text('Không đọc được file đã chọn')),
         );
         return;
       }
       if (bytes.length > maxBytes) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('File qua lon. Vui long chon file <= 700KB')),
+          const SnackBar(content: Text('File quá lớn. Vui lòng chọn file <= 700KB')),
         );
         return;
       }
@@ -118,7 +118,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Thiet bi khong ho tro chon PDF. Da chuyen sang chon anh tu thu vien.')),
+        const SnackBar(content: Text('Thiết bị không hỗ trợ chọn PDF. Đã chuyển sang chọn ảnh từ thư viện.')),
       );
       return;
     }
@@ -135,7 +135,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
     if (bytes == null || bytes.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Khong doc duoc file da chon')),
+        const SnackBar(content: Text('Không đọc được file đã chọn')),
       );
       return;
     }
@@ -143,7 +143,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
     if (bytes.length > maxBytes) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('File qua lon. Vui long chon file <= 700KB')),
+        const SnackBar(content: Text('File quá lớn. Vui lòng chọn file <= 700KB')),
       );
       return;
     }
@@ -194,7 +194,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong tai duoc du lieu tao hop dong: $e')),
+        SnackBar(content: Text('Không tải được dữ liệu tạo hợp đồng: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -233,13 +233,13 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedRoomId == null || _selectedTenantId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui long chon phong va nguoi thue')),
+        const SnackBar(content: Text('Vui lòng chọn phòng và người thuê')),
       );
       return;
     }
     if (_startDate == null || _endDate == null || !_endDate!.isAfter(_startDate!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ngay ket thuc phai sau ngay bat dau')),
+        const SnackBar(content: Text('Ngày kết thúc phải sau ngày bắt đầu')),
       );
       return;
     }
@@ -263,13 +263,13 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Tao hop dong thanh cong: $contractId')),
+        SnackBar(content: Text('Tạo hợp đồng thành công: $contractId')),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Khong tao duoc hop dong: $e')),
+        SnackBar(content: Text('Không tạo được hợp đồng: $e')),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -283,7 +283,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tao hop dong', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Tạo hợp đồng', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
@@ -297,7 +297,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Thong tin hop dong',
+                      'Thông tin hợp đồng',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -306,9 +306,9 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                     ),
                     const SizedBox(height: 14),
                     if (_rooms.isEmpty)
-                      _infoBanner('Khong co phong trong de tao hop dong.'),
+                      _infoBanner('Không có phòng trống để tạo hợp đồng.'),
                     if (_tenants.isEmpty)
-                      _infoBanner('Khong co tenant nao thuoc admin nay.'),
+                      _infoBanner('Không có tenant nào thuộc admin này.'),
                     if (_rooms.isEmpty || _tenants.isEmpty)
                       const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
@@ -316,7 +316,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       initialValue: _selectedRoomId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Phong',
+                        labelText: 'Phòng',
                         prefixIcon: Icon(Icons.meeting_room, color: AppColors.primary),
                         border: OutlineInputBorder(),
                       ),
@@ -327,7 +327,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                               ))
                           .toList(),
                       onChanged: (v) => setState(() => _selectedRoomId = v),
-                      validator: (v) => v == null ? 'Vui long chon phong' : null,
+                      validator: (v) => v == null ? 'Vui lòng chọn phòng' : null,
                     ),
                     const SizedBox(height: 14),
                     DropdownButtonFormField<String>(
@@ -335,7 +335,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       initialValue: _selectedTenantId,
                       isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Nguoi thue',
+                        labelText: 'Người thuê',
                         prefixIcon: Icon(Icons.person, color: AppColors.primary),
                         border: OutlineInputBorder(),
                       ),
@@ -352,17 +352,17 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                         }
                         _coTenantPickerValue = null;
                       }),
-                      validator: (v) => v == null ? 'Vui long chon nguoi thue' : null,
+                      validator: (v) => v == null ? 'Vui lòng chọn người thuê' : null,
                     ),
                     const SizedBox(height: 14),
                     _dateField(
-                      label: 'Ngay bat dau',
+                      label: 'Ngày bắt đầu',
                       value: _startDate,
                       onTap: () => _pickDate(isStart: true),
                     ),
                     const SizedBox(height: 14),
                     _dateField(
-                      label: 'Ngay ket thuc',
+                      label: 'Ngày kết thúc',
                       value: _endDate,
                       onTap: () => _pickDate(isStart: false),
                     ),
@@ -371,13 +371,13 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       controller: _termsController,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                        labelText: 'Dieu khoan hop dong',
+                        labelText: 'Điều khoản hợp đồng',
                         alignLabelWithHint: true,
                         border: OutlineInputBorder(),
                       ),
                       validator: (v) {
                         if ((v ?? '').trim().isEmpty) {
-                          return 'Vui long nhap dieu khoan hop dong';
+                          return 'Vui lòng nhập điều khoản hợp đồng';
                         }
                         return null;
                       },
@@ -394,7 +394,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                         prefixIcon: Icon(Icons.groups, color: AppColors.primary),
                         border: OutlineInputBorder(),
                       ),
-                      hint: const Text('Chon them nguoi o cung'),
+                      hint: const Text('Chọn thêm người ở cùng'),
                       items: _tenants
                           .where((t) => t.id != _selectedTenantId)
                           .map((t) => DropdownMenuItem<String>(
@@ -413,7 +413,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                     const SizedBox(height: 8),
                     Text(
                       _selectedCoTenantIds.isEmpty
-                          ? 'Chua chon co-tenant'
+                          ? 'Chưa chọn co-tenant'
                           : _tenants
                               .where((t) => _selectedCoTenantIds.contains(t.id))
                               .map((t) => t.displayLabel)
@@ -423,7 +423,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                     const SizedBox(height: 14),
                     InputDecorator(
                       decoration: const InputDecoration(
-                        labelText: 'File hop dong (anh/PDF)',
+                        labelText: 'File hợp đồng (ảnh/PDF)',
                         border: OutlineInputBorder(),
                         prefixIcon: Icon(Icons.attach_file, color: AppColors.primary),
                       ),
@@ -432,7 +432,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                         children: [
                           if (_contractFileName == null)
                             const Text(
-                              'Chua co file duoc chon',
+                              'Chưa có file được chọn',
                               style: TextStyle(color: Colors.grey),
                             )
                           else
@@ -455,14 +455,14 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                               OutlinedButton.icon(
                                 onPressed: _pickContractFile,
                                 icon: const Icon(Icons.upload_file),
-                                label: Text(_contractFileName == null ? 'Chon file' : 'Doi file'),
+                                label: Text(_contractFileName == null ? 'Chọn file' : 'Đổi file'),
                               ),
                               if (_contractFileName != null)
                                 OutlinedButton.icon(
                                   onPressed: _removeContractFile,
                                   icon: const Icon(Icons.delete_outline, color: Colors.red),
                                   label: const Text(
-                                    'Xoa file',
+                                    'Xoá file',
                                     style: TextStyle(color: Colors.red),
                                   ),
                                 ),
@@ -486,7 +486,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                         child: _isSaving
                             ? const CircularProgressIndicator(color: Colors.white)
                             : const Text(
-                                'TAO HOP DONG',
+                                'TẠO HỢP ĐỒNG',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
@@ -528,7 +528,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
           prefixIcon: const Icon(Icons.calendar_month, color: AppColors.primary),
           border: const OutlineInputBorder(),
         ),
-        child: Text(value == null ? 'Chon ngay' : _formatDate(value)),
+        child: Text(value == null ? 'Chọn ngày' : _formatDate(value)),
       ),
     );
   }
@@ -549,11 +549,11 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Gia thue thang (tu phong): ${room.basePrice.toStringAsFixed(0)}'),
-          Text('Tien coc (tu phong): ${room.depositAmount.toStringAsFixed(0)}'),
+          Text('Giá thuê tháng (từ phòng): ${room.basePrice.toStringAsFixed(0)}'),
+          Text('Tiền cọc (từ phòng): ${room.depositAmount.toStringAsFixed(0)}'),
           const SizedBox(height: 4),
           const Text(
-            'Khi tao hop dong, room se tu dong chuyen sang trang thai occupied.',
+            'Khi tạo hợp đồng, room sẽ tự động chuyển sang trạng thái occupied.',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],

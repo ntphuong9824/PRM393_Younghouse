@@ -76,6 +76,20 @@ class ContractService {
         .snapshots();
   }
 
+  Future<List<ContractModel>> getActiveContractsByLandlord(
+    String landlordId,
+  ) async {
+    final snap = await _db
+        .collection('contracts')
+        .where('landlord_id', isEqualTo: landlordId)
+        .where('status', isEqualTo: 'active')
+        .get();
+
+    final contracts = snap.docs.map(ContractModel.fromFirestore).toList();
+    contracts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return contracts;
+  }
+
   Future<List<AdminRoomOption>> getVacantRoomsByLandlord(String landlordId) async {
     final propertySnap = await _db
         .collection('properties')
@@ -107,7 +121,7 @@ class ContractService {
           AdminRoomOption(
             id: doc.id,
             roomNumber: ((data['room_number'] as String?) ?? '').trim(),
-            propertyName: propertyNameById[data['property_id']] ?? 'Toa nha',
+            propertyName: propertyNameById[data['property_id']] ?? 'Tòa nhà',
             basePrice: (data['base_price'] ?? 0).toDouble(),
             depositAmount: (data['deposit_amount'] ?? 0).toDouble(),
           ),
@@ -206,7 +220,7 @@ class ContractService {
 
     final data = doc.data() as Map<String, dynamic>;
     if (!_isContractParticipant(data, userId)) {
-      throw Exception('Ban khong co quyen xem hop dong nay');
+      throw Exception('Bạn không có quyền xem hợp đồng này');
     }
 
     return ContractModel.fromFirestore(doc);
@@ -229,27 +243,27 @@ class ContractService {
     await _db.runTransaction((txn) async {
       final roomSnap = await txn.get(roomRef);
       if (!roomSnap.exists) {
-        throw Exception('Phong khong ton tai');
+        throw Exception('Phòng không tồn tại');
       }
 
       final room = roomSnap.data() as Map<String, dynamic>;
       final roomStatus = (room['status'] as String?) ?? 'vacant';
       if (roomStatus != 'vacant') {
-        throw Exception('Phong da co nguoi thue hoac khong san sang');
+        throw Exception('Phòng đã có người thuê hoặc không sẵn sàng');
       }
 
       final tenantSnap = await txn.get(tenantRef);
       if (!tenantSnap.exists) {
-        throw Exception('Nguoi thue khong ton tai');
+        throw Exception('Người thuê không tồn tại');
       }
       final tenant = tenantSnap.data() as Map<String, dynamic>;
       final tenantRole = (tenant['role'] as String?) ?? '';
       if (tenantRole != 'tenant') {
-        throw Exception('Tai khoan duoc chon khong phai tenant');
+        throw Exception('Tài khoản được chọn không phải tenant');
       }
       final tenantLandlordId = _normalizeLandlordId(tenant['landlord_id']);
       if (tenantLandlordId.isNotEmpty && tenantLandlordId != landlordId) {
-        throw Exception('Tenant khong thuoc admin hien tai');
+        throw Exception('Tenant không thuộc admin hiện tại');
       }
 
       final normalizedTenantId = tenantId.trim();
@@ -305,9 +319,9 @@ class ContractService {
       for (final participantId in participantIds) {
         final notificationRef = _db.collection('notifications').doc();
         txn.set(notificationRef, {
-          'title': 'Hop dong moi',
+          'title': 'Hợp đồng mới',
           'message':
-              'Hop dong moi cho phong $roomNumber tu $startDateLabel den $endDateLabel da duoc tao.',
+              'Hợp đồng mới cho phòng $roomNumber từ $startDateLabel đến $endDateLabel đã được tạo.',
           'createdAt': FieldValue.serverTimestamp(),
           'targetUserId': participantId,
           'readBy': <String>[],
@@ -329,23 +343,23 @@ class ContractService {
     await _db.runTransaction((txn) async {
       final contractSnap = await txn.get(contractRef);
       if (!contractSnap.exists) {
-        throw Exception('Hop dong khong ton tai');
+        throw Exception('Hợp đồng không tồn tại');
       }
 
       final contract = contractSnap.data() as Map<String, dynamic>;
       final owner = (contract['landlord_id'] as String?) ?? '';
       if (owner != landlordId) {
-        throw Exception('Ban khong co quyen chinh sua hop dong nay');
+        throw Exception('Bạn không có quyền chỉnh sửa hợp đồng này');
       }
 
       final status = (contract['status'] as String?) ?? '';
       if (status != 'active') {
-        throw Exception('Chi co the cham dut hop dong dang active');
+        throw Exception('Chỉ có thể chấm dứt hợp đồng đang active');
       }
 
       final roomId = (contract['room_id'] as String?) ?? '';
       if (roomId.isEmpty) {
-        throw Exception('Hop dong khong co room_id hop le');
+        throw Exception('Hợp đồng không có room_id hợp lệ');
       }
       final roomRef = _db.collection('rooms').doc(roomId);
       final roomSnap = await txn.get(roomRef);

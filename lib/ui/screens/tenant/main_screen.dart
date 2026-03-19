@@ -12,6 +12,7 @@ import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
 import 'tenant_contract_list_screen.dart';
+import 'tenant_invoice_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String userId;
@@ -69,6 +70,13 @@ class _MainScreenState extends State<MainScreen> {
               builder: (_) => SelectInvoiceScreen(tenantId: widget.userId)),
         );
       }
+    } else if (title == 'Hoá đơn') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TenantInvoiceListScreen(tenantId: widget.userId),
+        ),
+      );
     } else if (title == 'Tạo hoá đơn') {
       await Navigator.push(
         context,
@@ -125,6 +133,11 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   final List<Map<String, dynamic>> _features = [
+    {
+      'title': 'Hoá đơn',
+      'icon': Icons.receipt_long_outlined,
+      'color': Colors.purple,
+    },
     {
       'title': 'Thông báo',
       'icon': Icons.notifications_active_outlined,

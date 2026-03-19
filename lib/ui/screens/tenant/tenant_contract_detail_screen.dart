@@ -38,11 +38,11 @@ class TenantContractDetailScreen extends StatelessWidget {
   String _statusLabel(String status) {
     switch (status) {
       case 'active':
-        return 'Dang hieu luc';
+        return 'Đang hiệu lực';
       case 'terminated':
-        return 'Da cham dut';
+        return 'Đã chấm dứt';
       case 'expired':
-        return 'Het han';
+        return 'Hết hạn';
       default:
         return status;
     }
@@ -56,7 +56,7 @@ class TenantContractDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text(
-          'Chi tiet hop dong',
+          'Chi tiết hợp đồng',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.primary,
@@ -77,7 +77,7 @@ class TenantContractDetailScreen extends StatelessWidget {
               child: Padding(
                 padding: const EdgeInsets.all(24),
                 child: Text(
-                  'Khong the xem hop dong: ${snapshot.error}',
+                  'Không thể xem hợp đồng: ${snapshot.error}',
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -87,7 +87,7 @@ class TenantContractDetailScreen extends StatelessWidget {
           final contract = snapshot.data;
           if (contract == null) {
             return const Center(
-              child: Text('Hop dong khong ton tai hoac ban khong co quyen xem'),
+              child: Text('Hợp đồng không tồn tại hoặc bạn không có quyền xem'),
             );
           }
 
@@ -97,16 +97,16 @@ class TenantContractDetailScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             children: [
               _section(
-                title: 'Thong tin chung',
+                title: 'Thông tin chung',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _line('Ma hop dong', contract.id),
-                    _line('Phong', contract.roomId),
-                    _line('Ngay bat dau', _formatDate(contract.startDate)),
-                    _line('Ngay ket thuc', _formatDate(contract.endDate)),
-                    _line('Tien thue thang', _money(contract.monthlyRent)),
-                    _line('Tien coc', _money(contract.deposit)),
+                    _line('Mã hợp đồng', contract.id),
+                    _line('Phòng', contract.roomId),
+                    _line('Ngày bắt đầu', _formatDate(contract.startDate)),
+                    _line('Ngày kết thúc', _formatDate(contract.endDate)),
+                    _line('Tiền thuê tháng', _money(contract.monthlyRent)),
+                    _line('Tiền cọc', _money(contract.deposit)),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -132,21 +132,21 @@ class TenantContractDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _section(
-                title: 'Nguoi trong hop dong',
+                title: 'Người trong hợp đồng',
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _line(
-                      'Nguoi thue chinh',
-                      '${contract.tenantId}${isPrimaryTenant ? ' (ban)' : ''}',
+                      'Người thuê chính',
+                      '${contract.tenantId}${isPrimaryTenant ? ' (bạn)' : ''}',
                     ),
                     if (contract.coTenants.isEmpty)
-                      _line('Nguoi o cung', 'Khong co')
+                      _line('Người ở cùng', 'Không có')
                     else
                       ...contract.coTenants.map(
                         (id) => _line(
-                          'Nguoi o cung',
-                          '$id${id == userId ? ' (ban)' : ''}',
+                          'Người ở cùng',
+                          '$id${id == userId ? ' (bạn)' : ''}',
                         ),
                       ),
                   ],
@@ -154,10 +154,10 @@ class TenantContractDetailScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _section(
-                title: 'Dieu khoan',
+                title: 'Điều khoản',
                 child: Text(
                   (contract.terms ?? '').trim().isEmpty
-                      ? 'Khong co dieu khoan'
+                      ? 'Không có điều khoản'
                       : contract.terms!.trim(),
                   style: const TextStyle(color: AppColors.textDark),
                 ),
@@ -165,14 +165,14 @@ class TenantContractDetailScreen extends StatelessWidget {
               if ((contract.pdfUrl ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _section(
-                  title: 'File hop dong',
+                  title: 'File hợp đồng',
                   child: SelectableText(contract.pdfUrl!.trim()),
                 ),
               ],
               if ((contract.terminationReason ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: 12),
                 _section(
-                  title: 'Ly do cham dut',
+                  title: 'Lý do chấm dứt',
                   child: Text(contract.terminationReason!.trim()),
                 ),
               ],
