@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
@@ -7,10 +6,9 @@ import '../../../models/notification_model.dart';
 import '../../../providers/notification_provider.dart';
 import 'notification_detail_screen.dart';
 
-const _kPageSize = 10;
-
 class AdminSendNotificationScreen extends StatefulWidget {
-  const AdminSendNotificationScreen({super.key});
+  final String landlordId;
+  const AdminSendNotificationScreen({super.key, required this.landlordId});
 
   @override
   State<AdminSendNotificationScreen> createState() =>
@@ -18,22 +16,29 @@ class AdminSendNotificationScreen extends StatefulWidget {
 }
 
 class _AdminSendNotificationScreenState
-    extends State<AdminSendNotificationScreen> {
+    extends State<AdminSendNotificationScreen>
+    with SingleTickerProviderStateMixin {
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
   bool _isSending = false;
+  late final TabController _tabController;
 
-  // Phân trang
-  int _currentPage = 0;
-
-  final Stream<QuerySnapshot> _notifStream = FirebaseFirestore.instance
-      .collection('notifications')
-      .snapshots();
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context
+          .read<NotificationProvider>()
+          .listenToNotifications(widget.landlordId);
+    });
+  }
 
   @override
   void dispose() {
     _titleController.dispose();
     _messageController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -55,7 +60,6 @@ class _AdminSendNotificationScreenState
       if (mounted) {
         _titleController.clear();
         _messageController.clear();
-        setState(() => _currentPage = 0);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã gửi thông báo thành công'),
@@ -74,7 +78,7 @@ class _AdminSendNotificationScreenState
     }
   }
 
-  Future<void> _confirmDelete(BuildContext context, NotificationModel n) async {
+  Future<void> _confirmDelete(NotificationModel n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -86,8 +90,7 @@ class _AdminSendNotificationScreenState
               child: const Text('Huỷ')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child:
-                const Text('Xoá', style: TextStyle(color: Colors.red)),
+            child: const Text('Xoá', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -102,282 +105,359 @@ class _AdminSendNotificationScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Gửi thông báo',
+        title: const Text('Thông báo',
             style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Gửi thông báo đến tất cả người thuê',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _titleController,
-              decoration: InputDecoration(
-                labelText: 'Tiêu đề thông báo',
-                prefixIcon:
-                    const Icon(Icons.title, color: AppColors.primary),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _messageController,
-              maxLines: 5,
-              decoration: InputDecoration(
-                labelText: 'Nội dung thông báo',
-                alignLabelWithHint: true,
-                prefixIcon: const Padding(
-                  padding: EdgeInsets.only(bottom: 64),
-                  child: Icon(Icons.message_outlined, color: AppColors.primary),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton.icon(
-                onPressed: _isSending ? null : _send,
-                icon: _isSending
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Icon(Icons.send, color: Colors.white),
-                label: Text(
-                  _isSending ? 'Đang gửi...' : 'GỬI THÔNG BÁO',
-                  style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const Divider(),
-            const SizedBox(height: 16),
-            const Text(
-              'Lịch sử thông báo đã gửi',
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark),
-            ),
-            const SizedBox(height: 12),
-            StreamBuilder<QuerySnapshot>(
-              stream: _notifStream,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                    ),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Lỗi: ${snapshot.error}',
-                        style: const TextStyle(
-                            color: Colors.red, fontSize: 12)),
-                  );
-                }
-
-                final all = (snapshot.data?.docs ?? [])
-                    .map((d) => NotificationModel.fromFirestore(d))
-                    .toList()
-                  ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-                if (all.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text('Chưa có thông báo nào',
-                          style: TextStyle(color: Colors.grey)),
-                    ),
-                  );
-                }
-
-                final totalPages = (all.length / _kPageSize).ceil();
-                final page = _currentPage.clamp(0, totalPages - 1);
-                final pageItems = all.skip(page * _kPageSize).take(_kPageSize).toList();
-
-                return Column(children: [
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pageItems.length,
-                    itemBuilder: (context, index) =>
-                        _buildItem(context, pageItems[index]),
-                  ),
-                  if (totalPages > 1) ...[
-                    const SizedBox(height: 12),
-                    _buildPagination(page, totalPages),
-                  ],
-                ]);
-              },
-            ),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(text: 'Đã nhận'),
+            Tab(text: 'Đã gửi'),
           ],
         ),
       ),
-    );
-  }
+      body: Consumer<NotificationProvider>(
+        builder: (context, provider, _) {
+          final all = provider.notifications;
 
-  Widget _buildItem(BuildContext context, NotificationModel n) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => NotificationDetailScreen(notification: n)),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Padding(
-              padding: EdgeInsets.only(top: 2),
-              child: Icon(Icons.notifications,
-                  color: AppColors.primary, size: 22),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      n.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      n.message,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 13, color: AppColors.textDark),
-                    ),
-                    const SizedBox(height: 6),
-                    Row(children: [
-                      Text(
-                        DateFormatter.formatWithTime(n.createdAt),
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.grey),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${n.readBy.length} đã đọc',
-                        style: const TextStyle(
-                            fontSize: 11, color: Colors.grey),
-                      ),
-                    ]),
-                  ]),
-            ),
-            const SizedBox(width: 4),
-            Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
-              const SizedBox(height: 4),
-              IconButton(
-                icon: const Icon(Icons.delete_outline,
-                    color: Colors.red, size: 20),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                tooltip: 'Xoá',
-                onPressed: () => _confirmDelete(context, n),
+          // Nhận: targetUserId = landlordId (từ tenant gửi lên)
+          final received = all
+              .where((n) => n.targetUserId == widget.landlordId)
+              .toList();
+
+          // Đã gửi: targetUserId = null (broadcast) hoặc là tenant
+          final sent = all
+              .where((n) => n.targetUserId != widget.landlordId)
+              .toList();
+
+          return TabBarView(
+            controller: _tabController,
+            children: [
+              _ReceivedTab(
+                notifications: received,
+                landlordId: widget.landlordId,
+                onDelete: _confirmDelete,
               ),
-            ]),
-          ]),
-        ),
+              _SentTab(
+                titleController: _titleController,
+                messageController: _messageController,
+                isSending: _isSending,
+                onSend: _send,
+                notifications: sent,
+                landlordId: widget.landlordId,
+                onDelete: _confirmDelete,
+              ),
+            ],
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildPagination(int current, int total) {
-    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      IconButton(
-        icon: const Icon(Icons.chevron_left),
-        onPressed: current > 0
-            ? () => setState(() => _currentPage = current - 1)
-            : null,
-        color: AppColors.primary,
-      ),
-      ...List.generate(total, (i) {
-        final isActive = i == current;
-        return GestureDetector(
-          onTap: () => setState(() => _currentPage = i),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: isActive ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: isActive ? AppColors.primary : Colors.grey.shade300,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${i + 1}',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight:
-                    isActive ? FontWeight.bold : FontWeight.normal,
-                color: isActive ? Colors.white : AppColors.textDark,
+// ── Tab Đã nhận ──────────────────────────────────────────────
+class _ReceivedTab extends StatelessWidget {
+  final List<NotificationModel> notifications;
+  final String landlordId;
+  final Future<void> Function(NotificationModel) onDelete;
+
+  const _ReceivedTab({
+    required this.notifications,
+    required this.landlordId,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (notifications.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.notifications_none, size: 64, color: Colors.grey),
+            SizedBox(height: 12),
+            Text('Chưa có thông báo nào',
+                style: TextStyle(color: Colors.grey, fontSize: 16)),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: notifications.length,
+      itemBuilder: (context, index) {
+        final n = notifications[index];
+        final isRead = n.isReadBy(landlordId);
+        return _NotifCard(
+          notification: n,
+          isRead: isRead,
+          onTap: () async {
+            await context
+                .read<NotificationProvider>()
+                .markAsRead(n.id, landlordId);
+            if (!context.mounted) return;
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) =>
+                      NotificationDetailScreen(notification: n)),
+            );
+          },
+          onDelete: () => onDelete(n),
+        );
+      },
+    );
+  }
+}
+
+// ── Tab Đã gửi ───────────────────────────────────────────────
+class _SentTab extends StatelessWidget {
+  final TextEditingController titleController;
+  final TextEditingController messageController;
+  final bool isSending;
+  final VoidCallback onSend;
+  final List<NotificationModel> notifications;
+  final String landlordId;
+  final Future<void> Function(NotificationModel) onDelete;
+
+  const _SentTab({
+    required this.titleController,
+    required this.messageController,
+    required this.isSending,
+    required this.onSend,
+    required this.notifications,
+    required this.landlordId,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Gửi thông báo đến tất cả người thuê',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: titleController,
+            decoration: InputDecoration(
+              labelText: 'Tiêu đề thông báo',
+              prefixIcon: const Icon(Icons.title, color: AppColors.primary),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
               ),
             ),
           ),
-        );
-      }),
-      IconButton(
-        icon: const Icon(Icons.chevron_right),
-        onPressed: current < total - 1
-            ? () => setState(() => _currentPage = current + 1)
-            : null,
-        color: AppColors.primary,
+          const SizedBox(height: 12),
+          TextField(
+            controller: messageController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              labelText: 'Nội dung thông báo',
+              alignLabelWithHint: true,
+              prefixIcon: const Padding(
+                padding: EdgeInsets.only(bottom: 56),
+                child:
+                    Icon(Icons.message_outlined, color: AppColors.primary),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12)),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade200),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton.icon(
+              onPressed: isSending ? null : onSend,
+              icon: isSending
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.send, color: Colors.white),
+              label: Text(
+                isSending ? 'Đang gửi...' : 'GỬI THÔNG BÁO',
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 28),
+          const Divider(),
+          const SizedBox(height: 12),
+          const Text(
+            'Lịch sử đã gửi',
+            style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark),
+          ),
+          const SizedBox(height: 12),
+          if (notifications.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('Chưa có thông báo nào',
+                    style: TextStyle(color: Colors.grey)),
+              ),
+            )
+          else
+            ...notifications.map(
+              (n) => _NotifCard(
+                notification: n,
+                isRead: true, // sent = luôn hiển thị bình thường
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) =>
+                          NotificationDetailScreen(notification: n)),
+                ),
+                onDelete: () => onDelete(n),
+              ),
+            ),
+        ],
       ),
-    ]);
+    );
+  }
+}
+
+// ── Card dùng chung ──────────────────────────────────────────
+class _NotifCard extends StatelessWidget {
+  final NotificationModel notification;
+  final bool isRead;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _NotifCard({
+    required this.notification,
+    required this.isRead,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      elevation: isRead ? 0 : 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isRead
+            ? BorderSide(color: Colors.grey.shade200)
+            : const BorderSide(color: AppColors.primary, width: 1.5),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isRead
+                        ? Colors.grey.shade100
+                        : AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isRead
+                        ? Icons.notifications_none
+                        : Icons.notifications,
+                    color: isRead ? Colors.grey : AppColors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: isRead
+                                ? FontWeight.normal
+                                : FontWeight.bold,
+                            fontSize: 14,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.message,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade700),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          DateFormatter.formatWithTime(
+                              notification.createdAt),
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.grey),
+                        ),
+                      ]),
+                ),
+                Column(mainAxisSize: MainAxisSize.min, children: [
+                  if (!isRead)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      margin: const EdgeInsets.only(bottom: 4),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline,
+                        color: Colors.red, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: onDelete,
+                  ),
+                ]),
+              ]),
+        ),
+      ),
+    );
   }
 }

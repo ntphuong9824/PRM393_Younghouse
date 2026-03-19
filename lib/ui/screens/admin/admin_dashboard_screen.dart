@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/chat_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../login_screen.dart';
 import 'admin_chat_list_screen.dart';
 import 'admin_contract_list_screen.dart';
@@ -29,6 +30,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChatProvider>().listenChatRooms(widget.landlordId);
+      context.read<NotificationProvider>().listenToNotifications(widget.landlordId);
     });
   }
 
@@ -59,9 +61,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      body: Consumer<ChatProvider>(
-        builder: (context, chatProvider, _) {
+      body: Consumer2<ChatProvider, NotificationProvider>(
+        builder: (context, chatProvider, notifProvider, _) {
           final unreadChat = chatProvider.totalUnreadByAdmin;
+          final unreadNotif = notifProvider.unreadCount(widget.landlordId);
           final features = [
             _FeatureItem(
               title: 'Quản lý tòa nhà',
@@ -77,8 +80,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               subtitle: 'Thông báo đến người thuê',
               icon: Icons.notifications_active,
               color: Colors.orange,
+              badge: unreadNotif > 0 ? '$unreadNotif' : null,
               onTap: () => Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const AdminSendNotificationScreen(),
+                builder: (_) => AdminSendNotificationScreen(landlordId: widget.landlordId),
               )),
             ),
             _FeatureItem(

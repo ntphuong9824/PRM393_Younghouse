@@ -84,7 +84,8 @@ class NotificationService implements INotificationService {
   Future<void> sendNotification({
     required String title,
     required String message,
-    String? targetUserId, // null = gửi tất cả tenant
+    String? targetUserId,
+    Map<String, dynamic>? metadata,
   }) async {
     await _firestore.collection('notifications').add({
       'title': title,
@@ -92,6 +93,7 @@ class NotificationService implements INotificationService {
       'createdAt': FieldValue.serverTimestamp(),
       'targetUserId': targetUserId,
       'readBy': [],
+      if (metadata != null) 'metadata': metadata,
     });
   }
 

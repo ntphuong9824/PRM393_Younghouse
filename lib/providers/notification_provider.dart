@@ -15,8 +15,9 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
-  int unreadCount(String userId) =>
-      _notifications.where((n) => !n.isReadBy(userId)).length;
+  int unreadCount(String userId) => _notifications
+      .where((n) => n.targetUserId == userId && !n.isReadBy(userId))
+      .length;
 
   void listenToNotifications(String userId) {
     // Hủy stream cũ trước khi tạo mới

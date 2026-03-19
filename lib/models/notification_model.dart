@@ -5,8 +5,9 @@ class NotificationModel {
   final String title;
   final String message;
   final DateTime createdAt;
-  final String? targetUserId; // null = gửi tất cả
-  final List<String> readBy; // danh sách userId đã đọc
+  final String? targetUserId;
+  final List<String> readBy;
+  final Map<String, dynamic>? metadata;
 
   NotificationModel({
     required this.id,
@@ -15,6 +16,7 @@ class NotificationModel {
     required this.createdAt,
     this.targetUserId,
     this.readBy = const [],
+    this.metadata,
   });
 
   bool isReadBy(String userId) => readBy.contains(userId);
@@ -26,6 +28,7 @@ class NotificationModel {
     DateTime? createdAt,
     String? targetUserId,
     List<String>? readBy,
+    Map<String, dynamic>? metadata,
   }) {
     return NotificationModel(
       id: id ?? this.id,
@@ -34,6 +37,7 @@ class NotificationModel {
       createdAt: createdAt ?? this.createdAt,
       targetUserId: targetUserId ?? this.targetUserId,
       readBy: readBy ?? this.readBy,
+      metadata: metadata ?? this.metadata,
     );
   }
 
@@ -46,6 +50,7 @@ class NotificationModel {
       createdAt: (data['createdAt'] as Timestamp).toDate(),
       targetUserId: data['targetUserId'],
       readBy: List<String>.from(data['readBy'] ?? []),
+      metadata: data['metadata'] as Map<String, dynamic>?,
     );
   }
 
@@ -55,5 +60,6 @@ class NotificationModel {
     'createdAt': Timestamp.fromDate(createdAt),
     'targetUserId': targetUserId,
     'readBy': readBy,
+    if (metadata != null) 'metadata': metadata,
   };
 }

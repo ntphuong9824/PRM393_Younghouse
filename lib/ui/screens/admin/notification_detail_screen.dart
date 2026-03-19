@@ -1,12 +1,52 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../models/notification_model.dart';
+import '../../../models/user_model.dart';
+import 'user_detail_screen.dart';
 
 class NotificationDetailScreen extends StatelessWidget {
   final NotificationModel notification;
 
   const NotificationDetailScreen({super.key, required this.notification});
+
+  bool get _isProfileUpdate =>
+      (notification.metadata?['type'] == 'profile_update' &&
+          notification.metadata?['tenantId'] != null) ||
+      notification.title.toLowerCase().contains('hồ sơ') ||
+      notification.title.toLowerCase().contains('xác nhận');
+
+  String? get _tenantId =>
+      notification.metadata?['tenantId'] as String?;
+
+  Future<void> _goToProfile(BuildContext context) async {
+    final tid = _tenantId;
+    if (tid == null || tid.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text(
+                'Không xác định được tenant. Vui lòng tìm trong danh sách người dùng.')),
+      );
+      return;
+    }
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(tid)
+        .get();
+    if (!context.mounted) return;
+    if (!doc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không tìm thấy người dùng')),
+      );
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => UserDetailScreen(user: UserModel.fromFirestore(doc))),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -86,6 +126,28 @@ class NotificationDetailScreen extends StatelessWidget {
               ]),
             ]),
           ),
+
+          if (_isProfileUpdate) ...[
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton.icon(
+                onPressed: () => _goToProfile(context),
+                icon: const Icon(Icons.person_outline, color: Colors.white),
+                label: const Text(
+                  'XEM VÀ XÁC NHẬN HỒ SƠ',
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
         ]),
       ),
     );

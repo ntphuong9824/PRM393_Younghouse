@@ -1,9 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/chat_provider.dart';
 import '../../../services/invoice_service.dart';
+import '../login_screen.dart';
 import 'payment_history_screen.dart';
 import 'payment_detail_screen.dart';
 import 'select_invoice_screen.dart';
@@ -33,15 +36,75 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final _invoiceService = InvoiceService();
+  final _db = FirebaseFirestore.instance;
+
+  String _displayName = '';
+  String _roomInfo = '';
 
   @override
   void initState() {
     super.initState();
+    _displayName = widget.userName;
+    _roomInfo = widget.roomInfo;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().listenToNotifications(widget.userId);
-      // Listen chat rooms để hiện badge unread
       context.read<ChatProvider>().listenChatRoomsForTenant(widget.userId);
+      _loadUserRoomInfo();
     });
+  }
+
+  Future<void> _loadUserRoomInfo() async {
+    try {
+      // Load user info
+      final userDoc = await _db.collection('users').doc(widget.userId).get();
+      final userData = userDoc.data();
+      if (userData != null) {
+        final fullName = (userData['full_name'] as String? ?? '').trim();
+        if (fullName.isNotEmpty && mounted) {
+          setState(() => _displayName = fullName);
+        }
+      }
+
+      // Tìm contract active của tenant để lấy roomId
+      final contractSnap = await _db
+          .collection('contracts')
+          .where('tenant_id', isEqualTo: widget.userId)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (contractSnap.docs.isEmpty) return;
+
+      final contractData = contractSnap.docs.first.data();
+      final roomId = contractData['room_id'] as String? ?? '';
+      if (roomId.isEmpty) return;
+
+      final roomDoc = await _db.collection('rooms').doc(roomId).get();
+      final roomData = roomDoc.data();
+      if (roomData == null) return;
+
+      final roomNumber = (roomData['room_number'] as String? ?? '').trim();
+
+      // Lấy tên property
+      final propertyId = roomData['property_id'] as String? ?? '';
+      String propertyName = '';
+      if (propertyId.isNotEmpty) {
+        final propertyDoc =
+            await _db.collection('properties').doc(propertyId).get();
+        propertyName =
+            (propertyDoc.data()?['name'] as String? ?? '').trim();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _roomInfo = [
+          if (roomNumber.isNotEmpty) 'Phòng $roomNumber',
+          if (propertyName.isNotEmpty) propertyName,
+        ].join(' - ');
+      });
+    } catch (_) {
+      // Giữ nguyên giá trị mặc định nếu lỗi
+    }
   }
 
   Future<void> _onFeatureTap(String title) async {
@@ -170,18 +233,17 @@ class _MainScreenState extends State<MainScreen> {
         centerTitle: true,
         actions: [
           IconButton(
-            onPressed: () {
-              Navigator.push(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Đăng xuất',
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              if (!context.mounted) return;
+              Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(
-                  builder: (_) => ProfileScreen(
-                    userId: widget.userId,
-                    userName: widget.userName,
-                  ),
-                ),
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
               );
             },
-            icon: const Icon(Icons.person_outline),
           ),
         ],
       ),
@@ -205,7 +267,7 @@ class _MainScreenState extends State<MainScreen> {
                   const Text('Xin chào,',
                       style: TextStyle(color: Colors.white70, fontSize: 16)),
                   Text(
-                    widget.userName,
+                    _displayName,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -213,7 +275,7 @@ class _MainScreenState extends State<MainScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    widget.roomInfo,
+                    _roomInfo,
                     style: const TextStyle(color: Colors.white, fontSize: 14),
                   ),
                 ],
