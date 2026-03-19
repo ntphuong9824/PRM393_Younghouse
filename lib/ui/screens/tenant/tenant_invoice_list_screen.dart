@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/invoice_model.dart';
 import '../../../services/invoice_service.dart';
+import 'invoice_detail_screen.dart';
 
 class TenantInvoiceListScreen extends StatefulWidget {
   final String tenantId;
@@ -247,7 +248,14 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => _load(),
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => PaymentDetailScreen(invoice: inv)),
+          );
+          _load();
+        },
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),

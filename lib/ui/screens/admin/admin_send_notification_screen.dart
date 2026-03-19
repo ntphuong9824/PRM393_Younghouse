@@ -161,7 +161,7 @@ class _AdminSendNotificationScreenState
 }
 
 // ── Tab Đã nhận ──────────────────────────────────────────────
-class _ReceivedTab extends StatelessWidget {
+class _ReceivedTab extends StatefulWidget {
   final List<NotificationModel> notifications;
   final String landlordId;
   final Future<void> Function(NotificationModel) onDelete;
@@ -173,8 +173,25 @@ class _ReceivedTab extends StatelessWidget {
   });
 
   @override
+  State<_ReceivedTab> createState() => _ReceivedTabState();
+}
+
+class _ReceivedTabState extends State<_ReceivedTab> {
+  static const _pageSize = 10;
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(_ReceivedTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset về trang đầu khi danh sách thay đổi
+    if (oldWidget.notifications.length != widget.notifications.length) {
+      _page = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (notifications.isEmpty) {
+    if (widget.notifications.isEmpty) {
       return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -188,36 +205,54 @@ class _ReceivedTab extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: notifications.length,
-      itemBuilder: (context, index) {
-        final n = notifications[index];
-        final isRead = n.isReadBy(landlordId);
-        return _NotifCard(
-          notification: n,
-          isRead: isRead,
-          onTap: () async {
-            await context
-                .read<NotificationProvider>()
-                .markAsRead(n.id, landlordId);
-            if (!context.mounted) return;
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) =>
-                      NotificationDetailScreen(notification: n)),
-            );
-          },
-          onDelete: () => onDelete(n),
-        );
-      },
+    final total = widget.notifications.length;
+    final totalPages = (total / _pageSize).ceil();
+    final start = _page * _pageSize;
+    final end = (start + _pageSize).clamp(0, total);
+    final paged = widget.notifications.sublist(start, end);
+
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: paged.length,
+            itemBuilder: (context, index) {
+              final n = paged[index];
+              final isRead = n.isReadBy(widget.landlordId);
+              return _NotifCard(
+                notification: n,
+                isRead: isRead,
+                onTap: () async {
+                  await context
+                      .read<NotificationProvider>()
+                      .markAsRead(n.id, widget.landlordId);
+                  if (!context.mounted) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            NotificationDetailScreen(notification: n)),
+                  );
+                },
+                onDelete: () => widget.onDelete(n),
+              );
+            },
+          ),
+        ),
+        if (totalPages > 1)
+          _PaginationBar(
+            currentPage: _page,
+            totalPages: totalPages,
+            onPageChanged: (p) => setState(() => _page = p),
+          ),
+      ],
     );
   }
 }
 
 // ── Tab Đã gửi ───────────────────────────────────────────────
-class _SentTab extends StatelessWidget {
+class _SentTab extends StatefulWidget {
   final TextEditingController titleController;
   final TextEditingController messageController;
   final bool isSending;
@@ -237,117 +272,151 @@ class _SentTab extends StatelessWidget {
   });
 
   @override
+  State<_SentTab> createState() => _SentTabState();
+}
+
+class _SentTabState extends State<_SentTab> {
+  static const _pageSize = 10;
+  int _page = 0;
+
+  @override
+  void didUpdateWidget(_SentTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.notifications.length != widget.notifications.length) {
+      _page = 0;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Gửi thông báo đến tất cả người thuê',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: titleController,
-            decoration: InputDecoration(
-              labelText: 'Tiêu đề thông báo',
-              prefixIcon: const Icon(Icons.title, color: AppColors.primary),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: messageController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              labelText: 'Nội dung thông báo',
-              alignLabelWithHint: true,
-              prefixIcon: const Padding(
-                padding: EdgeInsets.only(bottom: 56),
-                child:
-                    Icon(Icons.message_outlined, color: AppColors.primary),
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.grey.shade200),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: isSending ? null : onSend,
-              icon: isSending
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.send, color: Colors.white),
-              label: Text(
-                isSending ? 'Đang gửi...' : 'GỬI THÔNG BÁO',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-          const SizedBox(height: 28),
-          const Divider(),
-          const SizedBox(height: 12),
-          const Text(
-            'Lịch sử đã gửi',
-            style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textDark),
-          ),
-          const SizedBox(height: 12),
-          if (notifications.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Chưa có thông báo nào',
-                    style: TextStyle(color: Colors.grey)),
-              ),
-            )
-          else
-            ...notifications.map(
-              (n) => _NotifCard(
-                notification: n,
-                isRead: true, // sent = luôn hiển thị bình thường
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) =>
-                          NotificationDetailScreen(notification: n)),
+    final total = widget.notifications.length;
+    final totalPages = total == 0 ? 0 : (total / _pageSize).ceil();
+    final start = _page * _pageSize;
+    final end = total == 0 ? 0 : (start + _pageSize).clamp(0, total);
+    final paged = total == 0 ? <NotificationModel>[] : widget.notifications.sublist(start, end);
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Gửi thông báo đến tất cả người thuê',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark),
                 ),
-                onDelete: () => onDelete(n),
-              ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: widget.titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Tiêu đề thông báo',
+                    prefixIcon: const Icon(Icons.title, color: AppColors.primary),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: widget.messageController,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    labelText: 'Nội dung thông báo',
+                    alignLabelWithHint: true,
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(bottom: 56),
+                      child: Icon(Icons.message_outlined,
+                          color: AppColors.primary),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(color: Colors.grey.shade200),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton.icon(
+                    onPressed: widget.isSending ? null : widget.onSend,
+                    icon: widget.isSending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.send, color: Colors.white),
+                    label: Text(
+                      widget.isSending ? 'Đang gửi...' : 'GỬI THÔNG BÁO',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                const Divider(),
+                const SizedBox(height: 12),
+                const Text(
+                  'Lịch sử đã gửi',
+                  style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark),
+                ),
+                const SizedBox(height: 12),
+                if (paged.isEmpty)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text('Chưa có thông báo nào',
+                          style: TextStyle(color: Colors.grey)),
+                    ),
+                  )
+                else
+                  ...paged.map(
+                    (n) => _NotifCard(
+                      notification: n,
+                      isRead: true,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                NotificationDetailScreen(notification: n)),
+                      ),
+                      onDelete: () => widget.onDelete(n),
+                    ),
+                  ),
+              ],
             ),
-        ],
-      ),
+          ),
+        ),
+        if (totalPages > 1)
+          _PaginationBar(
+            currentPage: _page,
+            totalPages: totalPages,
+            onPageChanged: (p) => setState(() => _page = p),
+          ),
+      ],
     );
   }
 }
@@ -457,6 +526,75 @@ class _NotifCard extends StatelessWidget {
                 ]),
               ]),
         ),
+      ),
+    );
+  }
+}
+
+// ── Pagination bar dùng chung ────────────────────────────────
+class _PaginationBar extends StatelessWidget {
+  final int currentPage;
+  final int totalPages;
+  final void Function(int) onPageChanged;
+
+  const _PaginationBar({
+    required this.currentPage,
+    required this.totalPages,
+    required this.onPageChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Colors.grey.shade200)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            onPressed:
+                currentPage > 0 ? () => onPageChanged(currentPage - 1) : null,
+            color: AppColors.primary,
+          ),
+          ...List.generate(totalPages, (i) {
+            final selected = i == currentPage;
+            return GestureDetector(
+              onTap: () => onPageChanged(i),
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: selected ? AppColors.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: selected ? AppColors.primary : Colors.grey.shade300,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '${i + 1}',
+                  style: TextStyle(
+                    color: selected ? Colors.white : AppColors.textDark,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            );
+          }),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            onPressed: currentPage < totalPages - 1
+                ? () => onPageChanged(currentPage + 1)
+                : null,
+            color: AppColors.primary,
+          ),
+        ],
       ),
     );
   }

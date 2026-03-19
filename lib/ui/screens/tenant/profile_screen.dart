@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../services/auth_service.dart';
 import '../login_screen.dart';
 import 'edit_profile_screen.dart';
+import 'change_password_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userId;
@@ -359,6 +360,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         else
                           ..._guardians.map((g) => _buildGuardianItem(g)),
                       ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Đổi mật khẩu
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const ChangePasswordScreen()),
+                      ),
+                      icon: const Icon(Icons.lock_reset,
+                          color: AppColors.primary),
+                      label: const Text(
+                        'Đổi mật khẩu',
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.primary),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
