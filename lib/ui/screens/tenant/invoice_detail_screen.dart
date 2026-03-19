@@ -1,7 +1,10 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:app_links/app_links.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/invoice_model.dart';
+import '../../../services/invoice_service.dart';
 import '../../../services/payos_service.dart';
 
 class PaymentDetailScreen extends StatefulWidget {
@@ -14,16 +17,96 @@ class PaymentDetailScreen extends StatefulWidget {
 
 class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   final PayosService _payosService = PayosService();
+  final InvoiceService _invoiceService = InvoiceService();
   bool _isLoading = false;
+  late InvoiceModel _invoice;
+  StreamSubscription<Uri>? _linkSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _invoice = widget.invoice;
+    _listenDeepLink();
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  void _listenDeepLink() {
+    _linkSub = AppLinks().uriLinkStream.listen((uri) async {
+      if (!mounted) return;
+      // younghouse://payment/success?invoiceId=xxx
+      if (uri.host == 'payment' && uri.path == '/success') {
+        final invoiceId = uri.queryParameters['invoiceId'];
+        if (invoiceId == _invoice.id) {
+          await _confirmPayment();
+        }
+      }
+    });
+  }
+
+  Future<void> _confirmPayment() async {
+    setState(() => _isLoading = true);
+    try {
+      await _invoiceService.markAsPaid(_invoice.id);
+      if (!mounted) return;
+      setState(() {
+        _invoice = InvoiceModel(
+          id: _invoice.id,
+          contractId: _invoice.contractId,
+          roomId: _invoice.roomId,
+          tenantId: _invoice.tenantId,
+          landlordId: _invoice.landlordId,
+          month: _invoice.month,
+          year: _invoice.year,
+          electricPrev: _invoice.electricPrev,
+          electricCurr: _invoice.electricCurr,
+          electricPrice: _invoice.electricPrice,
+          waterPrev: _invoice.waterPrev,
+          waterCurr: _invoice.waterCurr,
+          waterPrice: _invoice.waterPrice,
+          rentAmount: _invoice.rentAmount,
+          otherFees: _invoice.otherFees,
+          totalAmount: _invoice.totalAmount,
+          status: 'paid',
+          dueDate: _invoice.dueDate,
+          paidAt: DateTime.now(),
+          paymentMethod: 'payos',
+          notes: _invoice.notes,
+          createdBy: _invoice.createdBy,
+          createdAt: _invoice.createdAt,
+          updatedAt: DateTime.now(),
+        );
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Thanh toán thành công'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi cập nhật trạng thái: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _handlePayment() async {
     setState(() => _isLoading = true);
     try {
       await _payosService.createPaymentLink(
         orderCode: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        amount: widget.invoice.totalAmount.toInt(),
+        amount: _invoice.totalAmount.toInt(),
         description:
-            'Thanh toan phong T${widget.invoice.month}/${widget.invoice.year}',
+            'Thanh toan phong T${_invoice.month}/${_invoice.year}',
+        invoiceId: _invoice.id,
       );
     } catch (e) {
       if (mounted) {
@@ -39,7 +122,7 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final fmt = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
-    final inv = widget.invoice;
+    final inv = _invoice;
     final isPaid = inv.status == 'paid';
 
     return Scaffold(

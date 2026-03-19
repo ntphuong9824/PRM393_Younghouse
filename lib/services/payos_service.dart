@@ -31,13 +31,14 @@ class PayosService {
     required int orderCode,
     required int amount,
     required String description,
+    required String invoiceId,
   }) async {
     final Map<String, dynamic> body = {
       "orderCode": orderCode,
       "amount": amount,
       "description": description,
-      "cancelUrl": "https://your-app-return-url.com/cancel",
-      "returnUrl": "https://your-app-return-url.com/success",
+      "cancelUrl": "younghouse://payment/cancel?invoiceId=$invoiceId",
+      "returnUrl": "younghouse://payment/success?invoiceId=$invoiceId",
     };
 
     // Tạo signature
