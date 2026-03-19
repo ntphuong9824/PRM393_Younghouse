@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/contract_model.dart';
+
 class AdminRoomOption {
   final String id;
   final String roomNumber;
@@ -46,6 +48,23 @@ class ContractService {
     if (value == null) return '';
     if (value is String) return value.trim();
     return value.toString().trim();
+  }
+
+  bool _isContractParticipant(Map<String, dynamic> contract, String userId) {
+    final normalizedUserId = userId.trim();
+    if (normalizedUserId.isEmpty) return false;
+
+    final tenantId = (contract['tenant_id'] as String?)?.trim() ?? '';
+    if (tenantId == normalizedUserId) return true;
+
+    final coTenants = List<String>.from(contract['co_tenants'] ?? const []);
+    return coTenants.map((e) => e.trim()).contains(normalizedUserId);
+  }
+
+  String _formatDateForNotification(DateTime date) {
+    final dd = date.day.toString().padLeft(2, '0');
+    final mm = date.month.toString().padLeft(2, '0');
+    return '$dd/$mm/${date.year}';
   }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> streamContractsByLandlord(
@@ -106,6 +125,30 @@ class ContractService {
   }
 
   Future<List<AdminTenantOption>> getTenantsByLandlord(String landlordId) async {
+    final activeContractSnap = await _db
+        .collection('contracts')
+        .where('landlord_id', isEqualTo: landlordId)
+        .get();
+
+    final occupiedTenantIds = <String>{};
+    for (final doc in activeContractSnap.docs) {
+      final contract = doc.data();
+      final status = (contract['status'] as String?)?.trim() ?? '';
+      if (status != 'active') continue;
+
+      final tenantId = (contract['tenant_id'] as String?)?.trim() ?? '';
+      if (tenantId.isNotEmpty) {
+        occupiedTenantIds.add(tenantId);
+      }
+
+      final coTenants = List<String>.from(contract['co_tenants'] ?? const []);
+      for (final coTenantId in coTenants.map((e) => e.trim())) {
+        if (coTenantId.isNotEmpty) {
+          occupiedTenantIds.add(coTenantId);
+        }
+      }
+    }
+
     final snap = await _db
         .collection('users')
         .where('role', isEqualTo: 'tenant')
@@ -113,6 +156,9 @@ class ContractService {
 
     final tenants = snap.docs
         .where((d) {
+          if (occupiedTenantIds.contains(d.id)) {
+            return false;
+          }
           final normalized = _normalizeLandlordId(d.data()['landlord_id']);
           return normalized.isEmpty || normalized == landlordId;
         })
@@ -128,6 +174,42 @@ class ContractService {
 
     tenants.sort((a, b) => a.displayLabel.compareTo(b.displayLabel));
     return tenants;
+  }
+
+  Stream<List<ContractModel>> streamContractsForTenant(String userId) {
+    return _db.collection('contracts').snapshots().map((snapshot) {
+      final docs = snapshot.docs
+          .where((doc) => _isContractParticipant(doc.data(), userId))
+          .toList()
+        ..sort((a, b) {
+          final aAt = a.data()['created_at'];
+          final bAt = b.data()['created_at'];
+          final aDate = aAt is Timestamp
+              ? aAt.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          final bDate = bAt is Timestamp
+              ? bAt.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          return bDate.compareTo(aDate);
+        });
+
+      return docs.map(ContractModel.fromFirestore).toList();
+    });
+  }
+
+  Future<ContractModel?> getContractDetailForTenant({
+    required String contractId,
+    required String userId,
+  }) async {
+    final doc = await _db.collection('contracts').doc(contractId).get();
+    if (!doc.exists) return null;
+
+    final data = doc.data() as Map<String, dynamic>;
+    if (!_isContractParticipant(data, userId)) {
+      throw Exception('Ban khong co quyen xem hop dong nay');
+    }
+
+    return ContractModel.fromFirestore(doc);
   }
 
   Future<String> createContractTransactional({
@@ -170,15 +252,30 @@ class ContractService {
         throw Exception('Tenant khong thuoc admin hien tai');
       }
 
+      final normalizedTenantId = tenantId.trim();
+      final normalizedCoTenants = coTenants
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty && e != normalizedTenantId)
+          .toSet()
+          .toList();
+
+      final participantIds = <String>{
+        normalizedTenantId,
+        ...normalizedCoTenants,
+      };
+      final roomNumber = (room['room_number'] as String?)?.trim() ?? roomId;
+      final startDateLabel = _formatDateForNotification(startDate);
+      final endDateLabel = _formatDateForNotification(endDate);
+
       final contractData = <String, dynamic>{
         'room_id': roomId,
-        'tenant_id': tenantId,
+        'tenant_id': normalizedTenantId,
         'landlord_id': landlordId,
         'start_date': Timestamp.fromDate(startDate),
         'end_date': Timestamp.fromDate(endDate),
         'monthly_rent': (room['base_price'] ?? 0).toDouble(),
         'deposit': (room['deposit_amount'] ?? 0).toDouble(),
-        'co_tenants': coTenants,
+        'co_tenants': normalizedCoTenants,
         'terms': terms.trim(),
         'status': 'active',
         'pdf_url': (pdfUrl ?? '').trim().isEmpty ? null : pdfUrl!.trim(),
@@ -191,7 +288,7 @@ class ContractService {
 
       txn.set(contractRef, contractData);
       txn.update(roomRef, {
-        'current_tenant_id': tenantId,
+        'current_tenant_id': normalizedTenantId,
         'current_contract_id': contractRef.id,
         'status': 'occupied',
         'updated_at': FieldValue.serverTimestamp(),
@@ -202,6 +299,19 @@ class ContractService {
         txn.update(tenantRef, {
           'landlord_id': landlordId,
           'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      for (final participantId in participantIds) {
+        final notificationRef = _db.collection('notifications').doc();
+        txn.set(notificationRef, {
+          'title': 'Hop dong moi',
+          'message':
+              'Hop dong moi cho phong $roomNumber tu $startDateLabel den $endDateLabel da duoc tao.',
+          'createdAt': FieldValue.serverTimestamp(),
+          'targetUserId': participantId,
+          'readBy': <String>[],
+          'contractId': contractRef.id,
         });
       }
     });

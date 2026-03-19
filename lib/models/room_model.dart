@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RoomModel {
@@ -88,6 +90,20 @@ class RoomModel {
   }
 
   factory RoomModel.fromSqlite(Map<String, dynamic> d) {
+    final rawImages = d['images'];
+    List<String> images = const [];
+    if (rawImages is String && rawImages.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawImages);
+        if (decoded is List) {
+          images = decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {
+        // Backward compatibility for old comma-separated format.
+        images = rawImages.split(',').where((e) => e.isNotEmpty).toList();
+      }
+    }
+
     return RoomModel(
       id: d['id'],
       propertyId: d['property_id'] ?? '',
@@ -99,7 +115,7 @@ class RoomModel {
       basePrice: d['base_price'] ?? 0.0,
       depositAmount: d['deposit_amount'] ?? 0.0,
       description: d['description'],
-      images: d['images'] != null ? (d['images'] as String).split(',').where((e) => e.isNotEmpty).toList() : [],
+      images: images,
       status: d['status'] ?? 'vacant',
       createdAt: DateTime.parse(d['created_at']),
       updatedAt: DateTime.parse(d['updated_at']),
@@ -133,7 +149,7 @@ class RoomModel {
     'base_price': basePrice,
     'deposit_amount': depositAmount,
     'description': description,
-    'images': images.join(','),
+    'images': jsonEncode(images),
     'status': status,
     'created_at': createdAt.toIso8601String(),
     'updated_at': updatedAt.toIso8601String(),

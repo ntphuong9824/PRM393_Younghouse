@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -96,6 +97,37 @@ class _RoomFormScreenState extends State<RoomFormScreen> {
     }
   }
 
+  Widget _buildExistingImage(String imageSource) {
+    if (imageSource.startsWith('data:image')) {
+      try {
+        final commaIndex = imageSource.indexOf(',');
+        if (commaIndex != -1) {
+          final bytes = base64Decode(imageSource.substring(commaIndex + 1));
+          return Image.memory(bytes, width: 80, height: 80, fit: BoxFit.cover);
+        }
+      } catch (_) {
+        // Fall through to broken image icon.
+      }
+      return const SizedBox(
+        width: 80,
+        height: 80,
+        child: Icon(Icons.broken_image),
+      );
+    }
+
+    return Image.network(
+      imageSource,
+      width: 80,
+      height: 80,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => const SizedBox(
+        width: 80,
+        height: 80,
+        child: Icon(Icons.broken_image),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -153,7 +185,7 @@ class _RoomFormScreenState extends State<RoomFormScreen> {
                 children: [
                   ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(url, width: 80, height: 80, fit: BoxFit.cover),
+                    child: _buildExistingImage(url),
                   ),
                   Positioned(
                     top: 0, right: 0,

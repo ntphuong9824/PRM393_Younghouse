@@ -65,7 +65,6 @@ class AuthService {
 	}
   }
 
-
 		  Stream<QuerySnapshot<Map<String, dynamic>>> streamTenantsByAdmin(
 			String landlordId,
 		  ) {

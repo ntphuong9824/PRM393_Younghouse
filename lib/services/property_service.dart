@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../models/property_model.dart';
 import '../models/room_model.dart';
 import '../core/interfaces/i_property_service.dart';
@@ -8,7 +8,6 @@ import 'local_db_service.dart';
 
 class PropertyService implements IPropertyService {
   final _db = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
   final _local = LocalDbService();
 
   // ── PROPERTIES ────────────────────────────────────────────────
@@ -81,19 +80,22 @@ class PropertyService implements IPropertyService {
 
   // ── UPLOAD ẢNH ────────────────────────────────────────────────
 
-  Future<String> uploadImage(File file, String path) async {
-    final ref = _storage.ref().child(path);
-    await ref.putFile(file);
-    return await ref.getDownloadURL();
+  String _guessMimeType(String path) {
+    final lowerPath = path.toLowerCase();
+    if (lowerPath.endsWith('.png')) return 'image/png';
+    if (lowerPath.endsWith('.webp')) return 'image/webp';
+    if (lowerPath.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
   }
 
   Future<List<String>> uploadRoomImages(List<File> files, String roomId) async {
-    final urls = <String>[];
-    for (int i = 0; i < files.length; i++) {
-      final url = await uploadImage(
-          files[i], 'rooms/$roomId/image_$i.jpg');
-      urls.add(url);
+    final images = <String>[];
+    for (final file in files) {
+      final bytes = await file.readAsBytes();
+      final mimeType = _guessMimeType(file.path);
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      images.add(dataUrl);
     }
-    return urls;
+    return images;
   }
 }

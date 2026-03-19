@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -282,6 +284,35 @@ class _RoomCard extends StatelessWidget {
     }
   }
 
+  Widget _imageFromSource(String source) {
+    if (source.startsWith('data:image')) {
+      try {
+        final commaIndex = source.indexOf(',');
+        if (commaIndex != -1) {
+          final bytes = base64Decode(source.substring(commaIndex + 1));
+          return Image.memory(
+            bytes,
+            width: 68,
+            height: 68,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _placeholder(),
+          );
+        }
+      } catch (_) {
+        return _placeholder();
+      }
+      return _placeholder();
+    }
+
+    return Image.network(
+      source,
+      width: 68,
+      height: 68,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => _placeholder(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
@@ -299,13 +330,7 @@ class _RoomCard extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: room.images.isNotEmpty
-                    ? Image.network(
-                        room.images.first,
-                        width: 68,
-                        height: 68,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
+                    ? _imageFromSource(room.images.first)
                     : _placeholder(),
               ),
               const SizedBox(width: 14),

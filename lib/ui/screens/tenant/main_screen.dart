@@ -11,6 +11,7 @@ import 'create_invoice_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
+import 'tenant_contract_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
   final String userId;
@@ -79,6 +80,13 @@ class _MainScreenState extends State<MainScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => NotificationScreen(userId: widget.userId),
+        ),
+      );
+    } else if (title == 'Hợp đồng') {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TenantContractListScreen(userId: widget.userId),
         ),
       );
     }

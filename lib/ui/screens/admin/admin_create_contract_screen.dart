@@ -20,11 +20,12 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = ContractService();
   final _termsController = TextEditingController();
-  final _coTenantsController = TextEditingController();
   final _pdfUrlController = TextEditingController();
 
   List<AdminRoomOption> _rooms = const [];
   List<AdminTenantOption> _tenants = const [];
+  final Set<String> _selectedCoTenantIds = <String>{};
+  String? _coTenantPickerValue;
   String? _selectedRoomId;
   String? _selectedTenantId;
   DateTime? _startDate;
@@ -43,7 +44,6 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
   @override
   void dispose() {
     _termsController.dispose();
-    _coTenantsController.dispose();
     _pdfUrlController.dispose();
     super.dispose();
   }
@@ -65,6 +65,10 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
         _tenants = tenants;
         _selectedRoomId = rooms.isNotEmpty ? rooms.first.id : null;
         _selectedTenantId = tenants.isNotEmpty ? tenants.first.id : null;
+        _selectedCoTenantIds
+          ..clear()
+          ..remove(_selectedTenantId);
+        _coTenantPickerValue = null;
       });
     } catch (e) {
       if (!mounted) return;
@@ -119,10 +123,8 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
       return;
     }
 
-    final coTenants = _coTenantsController.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
+    final coTenants = _selectedCoTenantIds
+        .where((id) => id != _selectedTenantId)
         .toList();
 
     setState(() => _isSaving = true);
@@ -222,7 +224,13 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                                 child: Text(t.displayLabel),
                               ))
                           .toList(),
-                      onChanged: (v) => setState(() => _selectedTenantId = v),
+                      onChanged: (v) => setState(() {
+                        _selectedTenantId = v;
+                        if (v != null) {
+                          _selectedCoTenantIds.remove(v);
+                        }
+                        _coTenantPickerValue = null;
+                      }),
                       validator: (v) => v == null ? 'Vui long chon nguoi thue' : null,
                     ),
                     const SizedBox(height: 14),
@@ -254,12 +262,42 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       },
                     ),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _coTenantsController,
+                    DropdownButtonFormField<String>(
+                      key: ValueKey(
+                        'co-tenant-${_selectedTenantId ?? 'none'}-${_selectedCoTenantIds.length}',
+                      ),
+                      initialValue: _coTenantPickerValue,
+                      isExpanded: true,
                       decoration: const InputDecoration(
-                        labelText: 'Co-tenants (userId, cach nhau boi dau phay)',
+                        labelText: 'Co-tenant',
+                        prefixIcon: Icon(Icons.groups, color: AppColors.primary),
                         border: OutlineInputBorder(),
                       ),
+                      hint: const Text('Chon them nguoi o cung'),
+                      items: _tenants
+                          .where((t) => t.id != _selectedTenantId)
+                          .map((t) => DropdownMenuItem<String>(
+                                value: t.id,
+                                child: Text(t.displayLabel),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null || value == _selectedTenantId) return;
+                        setState(() {
+                          _selectedCoTenantIds.add(value);
+                          _coTenantPickerValue = null;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _selectedCoTenantIds.isEmpty
+                          ? 'Chua chon co-tenant'
+                          : _tenants
+                              .where((t) => _selectedCoTenantIds.contains(t.id))
+                              .map((t) => t.displayLabel)
+                              .join(', '),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
@@ -358,6 +396,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
       ),
     );
   }
+
 }
 
 
