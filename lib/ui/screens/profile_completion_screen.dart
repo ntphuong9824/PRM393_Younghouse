@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+import 'dart:io';
 import '../../core/theme/app_colors.dart';
 import '../../models/user_model.dart';
 import '../../models/guardian_model.dart';
@@ -9,10 +12,12 @@ import 'tenant/main_screen.dart';
 class ProfileCompletionScreen extends StatefulWidget {
   final String userId;
   final String phone;
+  final String? initialFullName;
   const ProfileCompletionScreen({
     super.key,
     required this.userId,
     required this.phone,
+    this.initialFullName,
   });
 
   @override
@@ -32,13 +37,107 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
   final _fatherPhoneController = TextEditingController();
   final _motherNameController = TextEditingController();
   final _motherPhoneController = TextEditingController();
+  final ImagePicker _imagePicker = ImagePicker();
+
+  File? _idFrontImage;
+  File? _idBackImage;
+  String? _idFrontDataUrl;
+  String? _idBackDataUrl;
 
   bool _isSaving = false;
+  bool _isLoadingProfile = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final seededName = widget.initialFullName?.trim() ?? '';
+    if (seededName.isNotEmpty) {
+      _fullNameController.text = seededName;
+    }
+    _loadExistingProfile();
+  }
+
+  Future<void> _loadExistingProfile() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(widget.userId)
+          .get();
+      final data = snapshot.data();
+      final fullName = ((data?['full_name'] as String?) ??
+              (data?['fullName'] as String?) ??
+              widget.initialFullName ??
+              '')
+          .trim();
+
+      if (!mounted) return;
+      setState(() {
+        _fullNameController.text = fullName;
+        _isLoadingProfile = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoadingProfile = false);
+    }
+  }
 
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     return '$day/$month/${date.year}';
+  }
+
+  String? _validateVietnameseIdNumber(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return 'Vui lòng nhập Số CCCD/CMND';
+
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length != 9 && digitsOnly.length != 12) {
+      return 'CCCD/CMND phải gồm 9 hoặc 12 chữ số';
+    }
+    return null;
+  }
+
+  String? _validateGuardianPhone(String? value, {required bool required}) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) {
+      return required ? 'Vui lòng nhập Số điện thoại' : null;
+    }
+
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length < 9 || digitsOnly.length > 11) {
+      return 'Số điện thoại phải có từ 9 đến 11 chữ số';
+    }
+    return null;
+  }
+
+  Future<void> _pickIdImage(bool isFront) async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 75,
+      );
+      if (picked == null || !mounted) return;
+
+      final file = File(picked.path);
+      final bytes = await file.readAsBytes();
+      final dataUrl = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
+      setState(() {
+        if (isFront) {
+          _idFrontImage = file;
+          _idFrontDataUrl = dataUrl;
+        } else {
+          _idBackImage = file;
+          _idBackDataUrl = dataUrl;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Không thể chọn ảnh: $e')),
+      );
+    }
   }
 
   Future<void> _pickDob() async {
@@ -72,6 +171,20 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   Future<void> _submitProfile() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_fullNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Họ và tên chưa có dữ liệu. Vui lòng liên hệ quản trị viên.'),
+        ),
+      );
+      return;
+    }
+    if (_idFrontDataUrl == null || _idBackDataUrl == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng chụp đủ ảnh CCCD mặt trước và mặt sau.')),
+      );
+      return;
+    }
     setState(() => _isSaving = true);
 
     try {
@@ -83,6 +196,8 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
         fullName: _fullNameController.text.trim(),
         role: 'tenant',
         idNumber: _idNumberController.text.trim(),
+        idFrontUrl: _idFrontDataUrl,
+        idBackUrl: _idBackDataUrl,
         dateOfBirth: _selectedDob,
         isProfileConfirmed: false,
         createdAt: now,
@@ -182,7 +297,12 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Form(
+        child: _isLoadingProfile
+            ? const Padding(
+                padding: EdgeInsets.only(top: 80),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +313,15 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                       fontWeight: FontWeight.bold,
                       color: AppColors.primary)),
               const SizedBox(height: 16),
-              _field(_fullNameController, "Họ và tên", Icons.person),
+              _field(
+                _fullNameController,
+                "Họ và tên",
+                Icons.person,
+                hint: 'Tên được tạo bởi quản trị viên',
+                readOnly: true,
+                canRequestFocus: false,
+                enableInteractiveSelection: false,
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _dobController,
@@ -222,7 +350,25 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              _field(_idNumberController, "Số CCCD/CMND", Icons.badge),
+              _field(
+                _idNumberController,
+                "Số CCCD/CMND",
+                Icons.badge,
+                keyboardType: TextInputType.number,
+                validator: _validateVietnameseIdNumber,
+              ),
+              const SizedBox(height: 16),
+              _idImageCard(
+                title: 'Ảnh CCCD mặt trước',
+                imageFile: _idFrontImage,
+                onTap: () => _pickIdImage(true),
+              ),
+              const SizedBox(height: 12),
+              _idImageCard(
+                title: 'Ảnh CCCD mặt sau',
+                imageFile: _idBackImage,
+                onTap: () => _pickIdImage(false),
+              ),
 
               const SizedBox(height: 32),
               const Text("Thông tin người giám hộ",
@@ -259,7 +405,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
                 width: double.infinity,
                 height: 55,
                 child: ElevatedButton(
-                  onPressed: _isSaving ? null : _submitProfile,
+                  onPressed: (_isSaving || _isLoadingProfile) ? null : _submitProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
@@ -313,7 +459,9 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           _field(nameCtrl, "Họ tên $title", Icons.person, required: required),
           const SizedBox(height: 12),
           _field(phoneCtrl, "Số điện thoại $title", Icons.phone,
-              keyboardType: TextInputType.phone, required: required),
+              keyboardType: TextInputType.phone,
+              required: required,
+              validator: (v) => _validateGuardianPhone(v, required: required)),
         ],
       ),
     );
@@ -326,17 +474,28 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
     String? hint,
     TextInputType? keyboardType,
     bool required = true,
+    bool readOnly = false,
+    bool canRequestFocus = true,
+    bool enableInteractiveSelection = true,
+    String? Function(String?)? validator,
   }) {
     return TextFormField(
       controller: ctrl,
       keyboardType: keyboardType,
-      validator: required
-          ? (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null
-          : null,
+      readOnly: readOnly,
+      canRequestFocus: canRequestFocus,
+      enableInteractiveSelection: enableInteractiveSelection,
+      validator: validator ??
+          (required
+              ? (v) => v == null || v.isEmpty ? 'Vui lòng nhập $label' : null
+              : null),
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
         prefixIcon: Icon(icon, color: AppColors.primary, size: 22),
+        suffixIcon: readOnly
+            ? const Icon(Icons.lock_outline, color: Colors.grey, size: 20)
+            : null,
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
@@ -344,6 +503,56 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: Colors.grey.shade200),
         ),
+      ),
+    );
+  }
+
+  Widget _idImageCard({
+    required String title,
+    required File? imageFile,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: onTap,
+            child: Container(
+              height: 170,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: imageFile == null
+                  ? const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.camera_alt_outlined, color: Colors.grey),
+                        SizedBox(height: 8),
+                            Text('Nhấn để chọn ảnh từ thư viện'),
+                      ],
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.file(imageFile, fit: BoxFit.cover),
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
