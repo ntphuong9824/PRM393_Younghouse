@@ -4,8 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'admin/admin_dashboard_screen.dart';
+import 'profile_completion_screen.dart';
 import 'tenant/main_screen.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -50,6 +50,27 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
     } else {
+      final isProfileComplete = await _authService.isTenantProfileComplete(
+        userId: user.uid,
+        profile: profile,
+      );
+
+      if (!mounted) return;
+
+      if (!isProfileComplete) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ProfileCompletionScreen(
+              userId: user.uid,
+              phone: (profile['phone'] as String?) ?? (user.phoneNumber ?? ''),
+              initialFullName: fullName,
+            ),
+          ),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -269,57 +290,59 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 20),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _usePhoneLogin = false;
-                                    _isOtpSent = false;
-                                    _otpController.clear();
-                                  });
-                                },
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: _usePhoneLogin
-                                ? Colors.white
-                                : AppColors.primary.withValues(alpha: 0.08),
-                            side: BorderSide(
-                              color: _usePhoneLogin
-                                  ? Colors.grey.shade300
-                                  : AppColors.primary,
-                            ),
-                          ),
-                          child: const Text('Email'),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _isLoading
-                              ? null
-                              : () {
-                                  setState(() {
-                                    _usePhoneLogin = true;
-                                  });
-                                },
-                          style: OutlinedButton.styleFrom(
-                            backgroundColor: _usePhoneLogin
-                                ? AppColors.primary.withValues(alpha: 0.08)
-                                : Colors.white,
-                            side: BorderSide(
-                              color: _usePhoneLogin
-                                  ? AppColors.primary
-                                  : Colors.grey.shade300,
-                            ),
-                          ),
-                          child: const Text('So dien thoai'),
-                        ),
-                      ),
-                    ],
-                  ),
+                  // TODO: Tạm comment tab chọn phương thức đăng nhập
+                  // Row(
+                  //   children: [
+                  //     Expanded(
+                  //       child: OutlinedButton(
+                  //         onPressed: _isLoading
+                  //             ? null
+                  //             : () {
+                  //                 setState(() {
+                  //                   _usePhoneLogin = false;
+                  //                   _isOtpSent = false;
+                  //                   _otpController.clear();
+                  //                 });
+                  //               },
+                  //         style: OutlinedButton.styleFrom(
+                  //           backgroundColor: _usePhoneLogin
+                  //               ? Colors.white
+                  //               : AppColors.primary.withValues(alpha: 0.08),
+                  //           side: BorderSide(
+                  //             color: _usePhoneLogin
+                  //                 ? Colors.grey.shade300
+                  //                 : AppColors.primary,
+                  //           ),
+                  //         ),
+                  //         child: const Text('Email'),
+                  //       ),
+                  //     ),
+                  //     const SizedBox(width: 10),
+                  //     Expanded(
+                  //       child: OutlinedButton(
+                  //         onPressed: _isLoading
+                  //             ? null
+                  //             : () {
+                  //                 setState(() {
+                  //                   _usePhoneLogin = true;
+                  //                 });
+                  //               },
+                  //         style: OutlinedButton.styleFrom(
+                  //           backgroundColor: _usePhoneLogin
+                  //               ? AppColors.primary.withValues(alpha: 0.08)
+                  //               : Colors.white,
+                  //           side: BorderSide(
+                  //             color: _usePhoneLogin
+                  //                 ? AppColors.primary
+                  //                 : Colors.grey.shade300,
+                  //           ),
+                  //         ),
+                  //         child: const Text('So dien thoai'),
+                  //       ),
+                  //     ),
+                  //   ],
+                  // ),
+                  // const SizedBox(height: 20),
                   const SizedBox(height: 20),
                   if (!_usePhoneLogin) ...[
                     TextField(
@@ -370,82 +393,75 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                     ),
-                  ] else ...[
-                    TextField(
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      decoration: InputDecoration(
-                        labelText: 'So dien thoai',
-                        hintText: 'VD: 0912345678 hoac +84912345678',
-                        prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_isOtpSent) ...[
-                      TextField(
-                        controller: _otpController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Ma OTP',
-                          prefixIcon: const Icon(Icons.sms_outlined, color: AppColors.primary),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    ElevatedButton(
-                      onPressed: _isLoading
-                          ? null
-                          : (_isOtpSent ? _verifyOtpAndLogin : _sendOtp),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text(
-                              _isOtpSent ? 'XAC THUC OTP' : 'GUI MA OTP',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
-                    if (_isOtpSent)
-                      TextButton(
-                        onPressed: _isLoading ? null : _sendOtp,
-                        child: const Text('Gui lai ma OTP'),
-                      ),
+                  // TODO: Tạm comment giao diện đăng nhập bằng số điện thoại
+                  // ] else ...[
+                  //   TextField(
+                  //     controller: _phoneController,
+                  //     keyboardType: TextInputType.phone,
+                  //     decoration: InputDecoration(
+                  //       labelText: 'So dien thoai',
+                  //       hintText: 'VD: 0912345678 hoac +84912345678',
+                  //       prefixIcon: const Icon(Icons.phone_android, color: AppColors.primary),
+                  //       border: OutlineInputBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //     ),
+                  //   ),
+                  //   const SizedBox(height: 16),
+                  //   if (_isOtpSent) ...[
+                  //     TextField(
+                  //       controller: _otpController,
+                  //       keyboardType: TextInputType.number,
+                  //       decoration: InputDecoration(
+                  //         labelText: 'Ma OTP',
+                  //         prefixIcon: const Icon(Icons.sms_outlined, color: AppColors.primary),
+                  //         border: OutlineInputBorder(
+                  //           borderRadius: BorderRadius.circular(12),
+                  //         ),
+                  //       ),
+                  //     ),
+                  //     const SizedBox(height: 12),
+                  //   ],
+                  //   ElevatedButton(
+                  //     onPressed: _isLoading
+                  //         ? null
+                  //         : (_isOtpSent ? _verifyOtpAndLogin : _sendOtp),
+                  //     style: ElevatedButton.styleFrom(
+                  //       padding: const EdgeInsets.symmetric(vertical: 16),
+                  //       backgroundColor: AppColors.primary,
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //     ),
+                  //     child: _isLoading
+                  //         ? const SizedBox(
+                  //             width: 20,
+                  //             height: 20,
+                  //             child: CircularProgressIndicator(
+                  //               strokeWidth: 2,
+                  //               color: Colors.white,
+                  //             ),
+                  //           )
+                  //         : Text(
+                  //             _isOtpSent ? 'XAC THUC OTP' : 'GUI MA OTP',
+                  //             style: const TextStyle(
+                  //               fontSize: 16,
+                  //               fontWeight: FontWeight.bold,
+                  //               color: Colors.white,
+                  //             ),
+                  //           ),
+                  //   ),
+                  //   if (_isOtpSent)
+                  //     TextButton(
+                  //       onPressed: _isLoading ? null : _sendOtp,
+                  //       child: const Text('Gui lai ma OTP'),
+                  //     ),
+                  // ],
                   ],
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const RegisterScreen(),
-                              ),
-                            );
-                          },
-                    child: const Text('Chua co tai khoan? Dang ky'),
+                    onPressed: null,
+                    child: const Text('Tai khoan duoc tao boi quan tri vien'),
                   ),
                 ],
               ),

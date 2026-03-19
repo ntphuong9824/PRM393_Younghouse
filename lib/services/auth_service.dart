@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'dart:async';
+
+import '../firebase_options.dart';
 
 class PhoneOtpRequest {
   final String verificationId;
@@ -96,6 +99,68 @@ class AuthService {
 	return credential;
   }
 
+		  Stream<QuerySnapshot<Map<String, dynamic>>> streamTenantsByAdmin(
+			String landlordId,
+		  ) {
+			return _db
+				.collection('users')
+				.where('role', isEqualTo: 'tenant')
+				.where('landlord_id', isEqualTo: landlordId)
+				.snapshots();
+		  }
+
+		  Future<void> createTenantByAdmin({
+			required String adminId,
+			required String fullName,
+			required String email,
+			required String password,
+			required String phone,
+		  }) async {
+			final normalizedEmail = email.trim().toLowerCase();
+			final normalizedPhone = normalizePhoneNumber(phone);
+			final appName = 'admin-create-${DateTime.now().millisecondsSinceEpoch}';
+
+			FirebaseApp? secondaryApp;
+			try {
+			  secondaryApp = await Firebase.initializeApp(
+				name: appName,
+				options: DefaultFirebaseOptions.currentPlatform,
+			  );
+
+			  final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+			  final credential = await secondaryAuth.createUserWithEmailAndPassword(
+				email: normalizedEmail,
+				password: password,
+			  );
+
+			  final createdUser = credential.user;
+			  if (createdUser == null) {
+				throw FirebaseAuthException(code: 'user-not-found');
+			  }
+
+			  final now = FieldValue.serverTimestamp();
+			  await _db.collection('users').doc(createdUser.uid).set(
+				{
+				  'email': normalizedEmail,
+				  'phone': normalizedPhone,
+				  'full_name': fullName.trim(),
+				  'role': 'tenant',
+				  'landlord_id': adminId,
+				  'is_profile_confirmed': false,
+				  'created_at': now,
+				  'updated_at': now,
+				},
+				SetOptions(merge: true),
+			  );
+
+			  await secondaryAuth.signOut();
+			} finally {
+			  if (secondaryApp != null) {
+				await secondaryApp.delete();
+			  }
+			}
+		  }
+
   Future<PhoneOtpRequest> requestPhoneOtp({
 	required String phone,
 	int? forceResendingToken,
@@ -173,6 +238,37 @@ class AuthService {
 	await docRef.set(data, SetOptions(merge: true));
 	return data;
   }
+
+		  Future<bool> isTenantProfileComplete({
+			required String userId,
+			required Map<String, dynamic> profile,
+		  }) async {
+			final dateOfBirth = profile['date_of_birth'];
+			final hasDateOfBirth = dateOfBirth is Timestamp || dateOfBirth is DateTime;
+			final hasIdNumber = (profile['id_number'] as String?)?.trim().isNotEmpty == true;
+
+			if (!hasDateOfBirth || !hasIdNumber) {
+			  return false;
+			}
+
+			final guardianSubcollection = await _db
+				.collection('users')
+				.doc(userId)
+				.collection('guardians')
+				.limit(1)
+				.get();
+			if (guardianSubcollection.docs.isNotEmpty) {
+			  return true;
+			}
+
+			// Fallback for records that may exist only in top-level guardians collection.
+			final guardianTopLevel = await _db
+				.collection('guardians')
+				.where('user_id', isEqualTo: userId)
+				.limit(1)
+				.get();
+			return guardianTopLevel.docs.isNotEmpty;
+		  }
 
   Future<void> signOut() => _auth.signOut();
 

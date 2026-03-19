@@ -4,8 +4,10 @@ import '../../../core/theme/app_colors.dart';
 import '../../../providers/chat_provider.dart';
 import '../login_screen.dart';
 import 'admin_chat_list_screen.dart';
+import 'admin_contract_list_screen.dart';
 import 'admin_send_notification_screen.dart';
 import 'property_list_screen.dart';
+import 'user_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final String landlordId;
@@ -84,12 +86,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               )),
             ),
             _FeatureItem(
+              title: 'Nguoi dung',
+              subtitle: 'Danh sach va tao tai khoan',
+              icon: Icons.people,
+              color: Colors.indigo,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => UserManagementScreen(landlordId: widget.landlordId),
+                ),
+              ),
+            ),
+            _FeatureItem(
               title: 'Hợp đồng',
               subtitle: 'Quản lý hợp đồng thuê',
               icon: Icons.assignment,
               color: Colors.green,
-              onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Tính năng đang phát triển')),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      AdminContractListScreen(landlordId: widget.landlordId),
+                ),
               ),
             ),
             _FeatureItem(

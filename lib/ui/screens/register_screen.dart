@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
-import 'tenant/main_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String adminId;
+
+  const RegisterScreen({
+    super.key,
+    required this.adminId,
+  });
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -38,30 +42,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
     try {
-      final credential = await _authService.registerTenant(
+      await _authService.createTenantByAdmin(
+        adminId: widget.adminId,
         fullName: _fullNameController.text,
         phone: _phoneController.text.trim(),
         email: _emailController.text,
         password: _passwordController.text,
       );
 
-      final user = credential.user;
-      if (!mounted || user == null) return;
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dang ky thanh cong')),
+        const SnackBar(content: Text('Tao tai khoan thanh cong')),
       );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(
-          builder: (_) => MainScreen(
-            userId: user.uid,
-            userName: _fullNameController.text.trim(),
-          ),
-        ),
-        (route) => false,
-      );
+      Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +64,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Dang ky that bai: $e')),
+        SnackBar(content: Text('Tao tai khoan that bai: $e')),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -97,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Dang ky'),
+        title: const Text('Tao tai khoan tenant'),
         centerTitle: true,
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
