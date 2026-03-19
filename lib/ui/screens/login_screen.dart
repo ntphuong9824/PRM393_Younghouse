@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/auth_service.dart';
 import 'admin/admin_dashboard_screen.dart';
+import 'forgot_password_screen.dart';
 import 'profile_completion_screen.dart';
 import 'tenant/main_screen.dart';
 
@@ -391,6 +392,21 @@ class _LoginScreenState extends State<LoginScreen> {
                               "ĐĂNG NHẬP",
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordScreen()),
+                        ),
+                        child: const Text(
+                          'Quên mật khẩu?',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ),
                     ),
                   // TODO: Tạm comment giao diện đăng nhập bằng số điện thoại
                   // ] else ...[
