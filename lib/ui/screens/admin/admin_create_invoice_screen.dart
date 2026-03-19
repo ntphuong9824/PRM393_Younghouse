@@ -180,7 +180,7 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
 
       _disposeServiceControllers();
       for (final service in services) {
-        if (service.isMetered) {
+        if (_isEffectivelyMetered(service)) {
           _meterPrevCtrls[service.id] = TextEditingController(text: '0');
           _meterCurrCtrls[service.id] = TextEditingController(text: '0');
         } else {
@@ -214,8 +214,18 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
     return service.serviceName.trim().toLowerCase() == 'water';
   }
 
+  bool _isCommonService(RoomServiceModel service) {
+    final name = service.serviceName.trim().toLowerCase();
+    return name == 'common_service' || name == 'water' || name == 'internet' || name == 'trash';
+  }
+
+  /// Điện và nước luôn tính theo chỉ số, bất kể flag isMetered trong DB
+  bool _isEffectivelyMetered(RoomServiceModel service) {
+    return service.isMetered || _isElectricService(service) || _isWaterService(service);
+  }
+
   double _serviceQuantity(RoomServiceModel service) {
-    if (service.isMetered) {
+    if (_isEffectivelyMetered(service)) {
       final prev = int.tryParse(_meterPrevCtrls[service.id]?.text ?? '') ?? 0;
       final curr = int.tryParse(_meterCurrCtrls[service.id]?.text ?? '') ?? 0;
       return max(0, curr - prev).toDouble();
@@ -229,10 +239,6 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
     return _serviceQuantity(service) * service.pricePerUnit;
   }
 
-  double get _servicesTotal {
-    return _roomServices.fold<double>(0, (total, s) => total + _serviceAmount(s));
-  }
-
   double get _manualOtherFee {
     final value = double.tryParse(_manualOtherFeeCtrl.text) ?? 0;
     return value < 0 ? 0 : value;
@@ -243,7 +249,22 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
     return value < 0 ? 0 : value;
   }
 
-  double get _totalAmount => _rentAmount + _servicesTotal + _manualOtherFee;
+  double get _electricCost {
+    for (final s in _roomServices) {
+      if (_isElectricService(s)) return _serviceAmount(s);
+    }
+    return 0;
+  }
+
+  /// Phí dịch vụ = dịch vụ chung + các dịch vụ không phải điện
+  double get _otherServiceFees {
+    return _roomServices
+        .where((s) => !_isElectricService(s))
+        .fold<double>(0, (total, s) => total + _serviceAmount(s));
+  }
+
+  double get _totalAmount =>
+      _rentAmount + _electricCost + _otherServiceFees + _manualOtherFee;
 
   Future<void> _pickDueDate() async {
     final picked = await showDatePicker(
@@ -293,7 +314,7 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
       return;
     }
 
-    for (final service in _roomServices.where((s) => s.isMetered)) {
+    for (final service in _roomServices.where((s) => _isEffectivelyMetered(s))) {
       final prev = int.tryParse(_meterPrevCtrls[service.id]?.text ?? '') ?? 0;
       final curr = int.tryParse(_meterCurrCtrls[service.id]?.text ?? '') ?? 0;
       if (curr < prev) {
@@ -338,7 +359,7 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
         final amount = qty * service.pricePerUnit;
 
         String? note;
-        if (service.isMetered) {
+        if (_isEffectivelyMetered(service)) {
           final prev = int.tryParse(_meterPrevCtrls[service.id]?.text ?? '') ?? 0;
           final curr = int.tryParse(_meterCurrCtrls[service.id]?.text ?? '') ?? 0;
           note = 'meter:$prev-$curr';
@@ -382,6 +403,7 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
         );
       }
 
+      // otherFees = nước + dịch vụ khác + manual_other_fee (không tính điện)
       final otherFees = details
           .where((item) => item.serviceName.trim().toLowerCase() != 'electric')
           .fold<double>(0, (total, item) => total + item.amount);
@@ -621,12 +643,29 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('Tiền phòng: ${currency.format(_rentAmount)}'),
-                            const SizedBox(height: 4),
-                            Text('Dịch vụ: ${currency.format(_servicesTotal)}'),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Phí khác bổ sung: ${currency.format(_manualOtherFee)}',
-                            ),
+                            if (_electricCost > 0) ...[
+                              const SizedBox(height: 4),
+                              Builder(builder: (_) {
+                                // Tìm service điện để lấy chỉ số
+                                final elec = _roomServices.firstWhere(
+                                  _isElectricService,
+                                  orElse: () => _roomServices.first,
+                                );
+                                final prev = int.tryParse(_meterPrevCtrls[elec.id]?.text ?? '') ?? 0;
+                                final curr = int.tryParse(_meterCurrCtrls[elec.id]?.text ?? '') ?? 0;
+                                return Text(
+                                  'Tiền điện: (${curr - prev} số) ${currency.format(_electricCost)}',
+                                );
+                              }),
+                            ],
+                            if (_otherServiceFees > 0) ...[
+                              const SizedBox(height: 4),
+                              Text('Dịch vụ chung: ${currency.format(_otherServiceFees)}'),
+                            ],
+                            if (_manualOtherFee > 0) ...[
+                              const SizedBox(height: 4),
+                              Text('Phí khác: ${currency.format(_manualOtherFee)}'),
+                            ],
                             const Divider(height: 20),
                             Text(
                               'Tổng cộng: ${currency.format(_totalAmount)}',
@@ -673,9 +712,18 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
   Widget _serviceCard(RoomServiceModel service) {
     final qty = _serviceQuantity(service);
     final amount = _serviceAmount(service);
-    final subtitle = service.isMetered
-        ? '${qty.toStringAsFixed(0)} ${service.unit} x ${service.pricePerUnit.toStringAsFixed(0)}'
-        : '${qty.toStringAsFixed(2)} ${service.unit} x ${service.pricePerUnit.toStringAsFixed(0)}';
+    final isElectric = _isElectricService(service);
+    final currency = NumberFormat.currency(locale: 'vi_VN', symbol: '₫');
+
+    // Label hiển thị tên dịch vụ đẹp hơn
+    final displayName = {
+      'electric': 'Điện',
+      'common_service': 'Dịch vụ chung',
+      'water': 'Nước',
+      'internet': 'Internet',
+      'trash': 'Rác',
+      'parking': 'Gửi xe',
+    }[service.serviceName.trim().toLowerCase()] ?? service.serviceName;
 
     return Card(
       elevation: 0,
@@ -686,83 +734,93 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              service.serviceName,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(color: Colors.grey[700], fontSize: 12),
-            ),
-            const SizedBox(height: 8),
-            if (service.isMetered)
+            Text(displayName,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            const SizedBox(height: 10),
+            if (_isEffectivelyMetered(service)) ...[
+              // Điện/nước theo chỉ số: 2 ô nhập + preview công thức
               Row(
                 children: [
                   Expanded(
                     child: TextFormField(
                       controller: _meterPrevCtrls[service.id],
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Chỉ số đầu',
-                        border: OutlineInputBorder(),
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: isElectric ? 'Số cũ (kWh)' : 'Chỉ số cũ',
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) return 'Nhập đầu';
-                        if (int.tryParse((value ?? '').trim()) == null) {
-                          return 'Không hợp lệ';
-                        }
+                      validator: (v) {
+                        if ((v ?? '').trim().isEmpty) return 'Nhập số cũ';
+                        if (int.tryParse(v!.trim()) == null) return 'Không hợp lệ';
                         return null;
                       },
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    child: Icon(Icons.arrow_forward, size: 18, color: Colors.grey),
+                  ),
                   Expanded(
                     child: TextFormField(
                       controller: _meterCurrCtrls[service.id],
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Chỉ số cuối',
-                        border: OutlineInputBorder(),
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        labelText: isElectric ? 'Số mới (kWh)' : 'Chỉ số mới',
+                        border: const OutlineInputBorder(),
                         isDense: true,
                       ),
-                      validator: (value) {
-                        if ((value ?? '').trim().isEmpty) return 'Nhập cuối';
-                        if (int.tryParse((value ?? '').trim()) == null) {
-                          return 'Không hợp lệ';
-                        }
+                      validator: (v) {
+                        if ((v ?? '').trim().isEmpty) return 'Nhập số mới';
+                        if (int.tryParse(v!.trim()) == null) return 'Không hợp lệ';
                         return null;
                       },
                     ),
                   ),
                 ],
-              )
-            else
+              ),
+              const SizedBox(height: 8),
+              // Preview công thức: (mới - cũ) × giá = thành tiền
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${qty.toStringAsFixed(0)} ${service.unit} × ${currency.format(service.pricePerUnit)} = ${currency.format(amount)}',
+                  style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600),
+                ),
+              ),
+            ] else ...[
+              // Dịch vụ cố định: nhập số lượng
               TextFormField(
                 controller: _quantityCtrls[service.id],
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
                   labelText: 'Số lượng',
                   border: OutlineInputBorder(),
                   isDense: true,
                 ),
-                validator: (value) {
-                  if ((value ?? '').trim().isEmpty) return 'Nhập số lượng';
-                  final parsed = double.tryParse((value ?? '').trim());
+                validator: (v) {
+                  if ((v ?? '').trim().isEmpty) return 'Nhập số lượng';
+                  final parsed = double.tryParse(v!.trim());
                   if (parsed == null || parsed < 0) return 'Không hợp lệ';
                   return null;
                 },
               ),
-            const SizedBox(height: 8),
-            Text(
-              'Thành tiền: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'VND ').format(amount)}',
-              style: const TextStyle(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w600,
+              const SizedBox(height: 8),
+              Text(
+                '${qty.toStringAsFixed(0)} ${service.unit} × ${currency.format(service.pricePerUnit)} = ${currency.format(amount)}',
+                style: TextStyle(color: Colors.grey[700], fontSize: 13),
               ),
-            ),
+            ],
           ],
         ),
       ),

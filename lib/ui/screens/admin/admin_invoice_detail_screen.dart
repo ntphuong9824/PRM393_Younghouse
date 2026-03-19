@@ -153,28 +153,33 @@ class _AdminInvoiceDetailScreenState extends State<AdminInvoiceDetailScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
+                    // Tiền phòng
                     _billRow('Tiền phòng', inv.rentAmount),
                     const Divider(height: 24),
+
+                    // Tiền điện: số cũ → số mới × giá
                     _billRow(
                       'Tiền điện',
                       inv.electricCost,
-                      subtitle: inv.electricUsed > 0
-                          ? '${inv.electricUsed} số × ${_fmt.format(inv.electricPrice)}\n${inv.electricPrev} → ${inv.electricCurr}'
-                          : null,
+                      subtitle: 'Số cũ: ${inv.electricPrev}  →  Số mới: ${inv.electricCurr}\n'
+                          '${inv.electricUsed} số × ${_fmt.format(inv.electricPrice)} = ${_fmt.format(inv.electricCost)}',
                     ),
-                    if (inv.waterUsed > 0) ...[
+
+                    // Phí dịch vụ chung
+                    if (inv.serviceFees > 0) ...[
                       const Divider(height: 24),
                       _billRow(
-                        'Tiền nước',
-                        inv.waterCost,
-                        subtitle:
-                            '${inv.waterUsed} m³ × ${_fmt.format(inv.waterPrice)}\n${inv.waterPrev} → ${inv.waterCurr}',
+                        'Dịch vụ chung',
+                        inv.serviceFees,
                       ),
                     ],
+
+                    // Phí khác (chỉ hiện nếu có)
                     if (inv.otherFees > 0) ...[
                       const Divider(height: 24),
                       _billRow('Phí khác', inv.otherFees),
                     ],
+
                     const Divider(height: 24, thickness: 1.5),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

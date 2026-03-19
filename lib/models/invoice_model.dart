@@ -57,6 +57,8 @@ class InvoiceModel {
   double get electricCost => electricUsed * electricPrice;
   int get waterUsed => waterCurr - waterPrev;
   double get waterCost => waterUsed * waterPrice;
+  /// Phí dịch vụ chung = otherFees (đã lưu sẵn khi tạo hóa đơn, không tính điện)
+  double get serviceFees => otherFees;
 
   factory InvoiceModel.fromFirestore(DocumentSnapshot doc) {
     final d = doc.data() as Map<String, dynamic>;

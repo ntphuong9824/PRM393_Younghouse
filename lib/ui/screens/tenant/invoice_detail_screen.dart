@@ -202,29 +202,33 @@ class _PaymentDetailScreenState extends State<PaymentDetailScreen> {
                     padding: const EdgeInsets.all(20),
                     child: Column(
                       children: [
+                        // Tiền phòng
                         _billRow('Tiền phòng', fmt.format(inv.rentAmount)),
                         const Divider(height: 30),
+
+                        // Tiền điện: số cũ → số mới × giá
                         _billRow(
                           'Tiền điện',
                           fmt.format(inv.electricCost),
-                          subtitle:
-                              '(${inv.electricUsed} số x ${fmt.format(inv.electricPrice)})\n'
-                              'Chỉ số: ${inv.electricPrev} → ${inv.electricCurr}',
+                          subtitle: 'Số cũ: ${inv.electricPrev}  →  Số mới: ${inv.electricCurr}\n'
+                              '${inv.electricUsed} số × ${fmt.format(inv.electricPrice)} = ${fmt.format(inv.electricCost)}',
                         ),
-                        if (inv.waterUsed > 0) ...[
+
+                        // Phí dịch vụ chung
+                        if (inv.serviceFees > 0) ...[
                           const Divider(height: 30),
                           _billRow(
-                            'Tiền nước',
-                            fmt.format(inv.waterCost),
-                            subtitle:
-                                '(${inv.waterUsed} m³ x ${fmt.format(inv.waterPrice)})\n'
-                                'Chỉ số: ${inv.waterPrev} → ${inv.waterCurr}',
+                            'Dịch vụ chung',
+                            fmt.format(inv.serviceFees),
                           ),
                         ],
+
+                        // Phí khác (chỉ hiện nếu có)
                         if (inv.otherFees > 0) ...[
                           const Divider(height: 30),
                           _billRow('Phí khác', fmt.format(inv.otherFees)),
                         ],
+
                         const Divider(height: 40, thickness: 1.5),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,

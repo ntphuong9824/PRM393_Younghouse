@@ -14,10 +14,7 @@ import '../../widgets/app_save_button.dart';
 // Dịch vụ mặc định gợi ý
 const _kServicePresets = [
   {'name': 'electric', 'label': 'Điện', 'unit': 'kWh', 'metered': true},
-  {'name': 'water', 'label': 'Nước', 'unit': 'person', 'metered': false},
-  {'name': 'internet', 'label': 'Internet', 'unit': 'person', 'metered': false},
-  {'name': 'trash', 'label': 'Rác', 'unit': 'person', 'metered': false},
-  {'name': 'parking', 'label': 'Gửi xe', 'unit': 'person', 'metered': false},
+  {'name': 'common_service', 'label': 'Dịch vụ chung', 'unit': 'person', 'metered': false},
 ];
 
 class _ServiceEntry {
