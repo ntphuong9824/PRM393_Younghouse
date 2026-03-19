@@ -5,12 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/chat_provider.dart';
-import '../../../services/invoice_service.dart';
 import '../login_screen.dart';
-import 'payment_history_screen.dart';
-import 'payment_detail_screen.dart';
-import 'select_invoice_screen.dart';
-import 'create_invoice_screen.dart';
 import 'chat_support_screen.dart';
 import 'notification_screen.dart';
 import 'profile_screen.dart';
@@ -35,7 +30,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final _invoiceService = InvoiceService();
   final _db = FirebaseFirestore.instance;
 
   String _displayName = '';
@@ -108,43 +102,12 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _onFeatureTap(String title) async {
-    if (title == 'Thanh toán') {
-      final invoices = await _invoiceService.getInvoicesByTenant(widget.userId);
-      final unpaid = invoices.where((i) => i.status != 'paid').toList();
-      if (!mounted) return;
-      if (unpaid.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Không có hoá đơn nào cần thanh toán'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else if (unpaid.length == 1) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PaymentDetailScreen(invoice: unpaid.first),
-          ),
-        );
-      } else {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (_) => SelectInvoiceScreen(tenantId: widget.userId)),
-        );
-      }
-    } else if (title == 'Hoá đơn') {
+    if (title == 'Hoá đơn') {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => TenantInvoiceListScreen(tenantId: widget.userId),
         ),
-      );
-    } else if (title == 'Tạo hoá đơn') {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (_) => CreateInvoiceScreen(tenantId: widget.userId)),
       );
     } else if (title == 'Thông báo') {
       Navigator.push(
@@ -179,13 +142,6 @@ class _MainScreenState extends State<MainScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => PaymentHistoryScreen(tenantId: widget.userId),
-        ),
-      );
-    } else if (index == 3) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
           builder: (_) => ProfileScreen(
             userId: widget.userId,
             userName: widget.userName,
@@ -210,16 +166,6 @@ class _MainScreenState extends State<MainScreen> {
       'title': 'Hợp đồng',
       'icon': Icons.assignment_outlined,
       'color': Colors.blue,
-    },
-    {
-      'title': 'Thanh toán',
-      'icon': Icons.account_balance_wallet_outlined,
-      'color': Colors.green,
-    },
-    {
-      'title': 'Tạo hoá đơn',
-      'icon': Icons.receipt_long_outlined,
-      'color': Colors.purple,
     },
   ];
 
@@ -342,8 +288,6 @@ class _MainScreenState extends State<MainScreen> {
                 ),
                 label: 'Hỗ trợ',
               ),
-              const BottomNavigationBarItem(
-                  icon: Icon(Icons.history), label: 'Lịch sử'),
               const BottomNavigationBarItem(
                   icon: Icon(Icons.person_outline), label: 'Tài khoản'),
             ],

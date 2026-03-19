@@ -1,9 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/invoice_model.dart';
 import '../../../services/invoice_service.dart';
-import 'payment_detail_screen.dart';
 
 class TenantInvoiceListScreen extends StatefulWidget {
   final String tenantId;
@@ -21,9 +21,9 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
 
   late TabController _tabController;
   List<InvoiceModel> _all = [];
+  Map<String, String> _roomNumbers = {}; // roomId -> room_number
   bool _isLoading = true;
 
-  // Filter state
   int? _filterYear;
   List<int> _availableYears = [];
 
@@ -43,9 +43,26 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
   Future<void> _load() async {
     setState(() => _isLoading = true);
     final invoices = await _service.getInvoicesByTenant(widget.tenantId);
-    final years = invoices.map((i) => i.year).toSet().toList()..sort((a, b) => b.compareTo(a));
+
+    // Resolve room numbers
+    final roomIds = invoices.map((i) => i.roomId).toSet();
+    final roomNumbers = <String, String>{};
+    for (final id in roomIds) {
+      if (id.isEmpty) continue;
+      final doc = await FirebaseFirestore.instance
+          .collection('rooms')
+          .doc(id)
+          .get();
+      roomNumbers[id] =
+          (doc.data()?['room_number'] as String? ?? id).trim();
+    }
+
+    final years = invoices.map((i) => i.year).toSet().toList()
+      ..sort((a, b) => b.compareTo(a));
+
     setState(() {
       _all = invoices;
+      _roomNumbers = roomNumbers;
       _availableYears = years;
       _filterYear = years.isNotEmpty ? years.first : null;
       _isLoading = false;
@@ -133,7 +150,7 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      color: AppColors.primary,
+      color: Colors.red,
       child: Row(
         children: [
           const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
@@ -203,7 +220,8 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.receipt_long_outlined, size: 56, color: Colors.grey.shade300),
+            Icon(Icons.receipt_long_outlined,
+                size: 56, color: Colors.grey.shade300),
             const SizedBox(height: 12),
             const Text('Không có hoá đơn nào',
                 style: TextStyle(color: Colors.grey, fontSize: 15)),
@@ -223,18 +241,13 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
 
   Widget _invoiceCard(InvoiceModel inv) {
     final color = _statusColor(inv.status);
+    final roomNumber = _roomNumbers[inv.roomId] ?? inv.roomId;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PaymentDetailScreen(invoice: inv)),
-          );
-          _load();
-        },
+        onTap: () => _load(),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -264,7 +277,7 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phòng ${inv.roomId}',
+                    Text('Phòng $roomNumber',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
@@ -278,7 +291,8 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
                     const SizedBox(height: 3),
                     Text(
                       'Hạn: ${DateFormat('dd/MM/yyyy').format(inv.dueDate)}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      style:
+                          TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                   ],
                 ),
@@ -287,8 +301,8 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -300,7 +314,8 @@ class _TenantInvoiceListScreenState extends State<TenantInvoiceListScreen>
                             fontWeight: FontWeight.bold)),
                   ),
                   const SizedBox(height: 8),
-                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                  const Icon(Icons.chevron_right,
+                      color: Colors.grey, size: 20),
                 ],
               ),
             ],
