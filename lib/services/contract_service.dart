@@ -42,6 +42,12 @@ class AdminTenantOption {
 class ContractService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+  String _normalizeLandlordId(dynamic value) {
+    if (value == null) return '';
+    if (value is String) return value.trim();
+    return value.toString().trim();
+  }
+
   Stream<QuerySnapshot<Map<String, dynamic>>> streamContractsByLandlord(
     String landlordId,
   ) {
@@ -103,10 +109,13 @@ class ContractService {
     final snap = await _db
         .collection('users')
         .where('role', isEqualTo: 'tenant')
-        .where('landlord_id', isEqualTo: landlordId)
         .get();
 
     final tenants = snap.docs
+        .where((d) {
+          final normalized = _normalizeLandlordId(d.data()['landlord_id']);
+          return normalized.isEmpty || normalized == landlordId;
+        })
         .map(
           (d) => AdminTenantOption(
             id: d.id,
@@ -156,8 +165,8 @@ class ContractService {
       if (tenantRole != 'tenant') {
         throw Exception('Tai khoan duoc chon khong phai tenant');
       }
-      final tenantLandlordId = (tenant['landlord_id'] as String?) ?? '';
-      if (tenantLandlordId != landlordId) {
+      final tenantLandlordId = _normalizeLandlordId(tenant['landlord_id']);
+      if (tenantLandlordId.isNotEmpty && tenantLandlordId != landlordId) {
         throw Exception('Tenant khong thuoc admin hien tai');
       }
 
@@ -187,6 +196,14 @@ class ContractService {
         'status': 'occupied',
         'updated_at': FieldValue.serverTimestamp(),
       });
+
+      // Claim tenant to current admin when tenant is still unassigned.
+      if (tenantLandlordId.isEmpty) {
+        txn.update(tenantRef, {
+          'landlord_id': landlordId,
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
     });
 
     return contractRef.id;

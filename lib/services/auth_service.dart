@@ -65,39 +65,6 @@ class AuthService {
 	}
   }
 
-  Future<UserCredential> registerTenant({
-	required String fullName,
-	required String email,
-	required String password,
-	required String phone,
-  }) async {
-	final normalizedPhone = normalizePhoneNumber(phone);
-	final credential = await _auth.createUserWithEmailAndPassword(
-	  email: email.trim().toLowerCase(),
-	  password: password,
-	);
-
-	final user = credential.user;
-	if (user == null) {
-	  throw FirebaseAuthException(code: 'user-not-found');
-	}
-
-	final now = FieldValue.serverTimestamp();
-	await _db.collection('users').doc(user.uid).set(
-	  {
-		'email': user.email ?? email.trim().toLowerCase(),
-		'phone': normalizedPhone,
-		'full_name': fullName.trim(),
-		'role': 'tenant',
-		'is_profile_confirmed': false,
-		'created_at': now,
-		'updated_at': now,
-	  },
-	  SetOptions(merge: true),
-	);
-
-	return credential;
-  }
 
 		  Stream<QuerySnapshot<Map<String, dynamic>>> streamTenantsByAdmin(
 			String landlordId,
@@ -106,6 +73,13 @@ class AuthService {
 				.collection('users')
 				.where('role', isEqualTo: 'tenant')
 				.where('landlord_id', isEqualTo: landlordId)
+				.snapshots();
+		  }
+
+		  Stream<QuerySnapshot<Map<String, dynamic>>> streamAllTenants() {
+			return _db
+				.collection('users')
+				.where('role', isEqualTo: 'tenant')
 				.snapshots();
 		  }
 
@@ -299,4 +273,3 @@ class AuthService {
 	);
   }
 }
-

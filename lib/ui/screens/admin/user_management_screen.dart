@@ -39,7 +39,7 @@ class UserManagementScreen extends StatelessWidget {
         label: const Text('Tao tai khoan'),
       ),
       body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-        stream: authService.streamTenantsByAdmin(landlordId),
+        stream: authService.streamAllTenants(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -60,6 +60,18 @@ class UserManagementScreen extends StatelessWidget {
           final docs = List<QueryDocumentSnapshot<Map<String, dynamic>>>.from(
             snapshot.data?.docs ?? const [],
           )
+            ..retainWhere((doc) {
+              final data = doc.data();
+              final rawLandlordId = data['landlord_id'];
+              if (rawLandlordId == null) return true;
+
+              final normalizedLandlordId = rawLandlordId is String
+                  ? rawLandlordId.trim()
+                  : rawLandlordId.toString().trim();
+              if (normalizedLandlordId.isEmpty) return true;
+
+              return normalizedLandlordId == landlordId;
+            })
             ..sort((a, b) {
               final aTs = a.data()['created_at'];
               final bTs = b.data()['created_at'];
