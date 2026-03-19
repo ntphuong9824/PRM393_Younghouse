@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -251,7 +252,7 @@ class _FilterBar extends StatelessWidget {
 
 // ── Room Card ────────────────────────────────────────────────────
 
-class _RoomCard extends StatelessWidget {
+class _RoomCard extends StatefulWidget {
   final RoomModel room;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -261,6 +262,55 @@ class _RoomCard extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
   });
+
+  @override
+  State<_RoomCard> createState() => _RoomCardState();
+}
+
+class _RoomCardState extends State<_RoomCard> {
+  String? _tenantName;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.room.status == 'occupied' &&
+        widget.room.currentTenantId != null) {
+      _fetchTenantName(widget.room.currentTenantId!);
+    }
+  }
+
+  @override
+  void didUpdateWidget(_RoomCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.room.currentTenantId != oldWidget.room.currentTenantId) {
+      setState(() => _tenantName = null);
+      if (widget.room.currentTenantId != null) {
+        _fetchTenantName(widget.room.currentTenantId!);
+      }
+    }
+  }
+
+  Future<void> _fetchTenantName(String tenantId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(tenantId)
+          .get();
+      if (!mounted) return;
+      final data = doc.data();
+      final name = (data?['full_name'] as String?)?.trim();
+      final phone = (data?['phone'] as String?)?.trim();
+      setState(() {
+        _tenantName = (name != null && name.isNotEmpty)
+            ? name
+            : (phone != null && phone.isNotEmpty)
+                ? phone
+                : tenantId;
+      });
+    } catch (_) {}
+  }
+
+  RoomModel get room => widget.room;
 
   Color get _statusColor {
     switch (room.status) {
@@ -322,7 +372,7 @@ class _RoomCard extends StatelessWidget {
       elevation: 1.5,
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        onTap: onEdit,
+        onTap: widget.onEdit,
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -380,6 +430,26 @@ class _RoomCard extends StatelessWidget {
                                 fontWeight: FontWeight.bold)),
                       ),
                     ]),
+                    // Tên người thuê
+                    if (room.status == 'occupied') ...[
+                      const SizedBox(height: 5),
+                      Row(
+                        children: [
+                          const Icon(Icons.person_outline,
+                              size: 13, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              _tenantName ?? 'Đang tải...',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 12, color: Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (room.description != null &&
                         room.description!.isNotEmpty) ...[
                       const SizedBox(height: 4),
@@ -414,7 +484,7 @@ class _RoomCard extends StatelessWidget {
                     ]),
                   ),
                 ],
-                onSelected: (v) => v == 'edit' ? onEdit() : onDelete(),
+                onSelected: (v) => v == 'edit' ? widget.onEdit() : widget.onDelete(),
               ),
             ],
           ),
