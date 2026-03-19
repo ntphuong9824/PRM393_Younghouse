@@ -7,6 +7,7 @@ import '../../core/theme/app_colors.dart';
 import '../../models/user_model.dart';
 import '../../models/guardian_model.dart';
 import '../../services/local_db_service.dart';
+import '../../services/notification_service.dart';
 import 'tenant/main_screen.dart';
 
 class ProfileCompletionScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
 
   bool _isSaving = false;
   bool _isLoadingProfile = true;
+  String? _landlordId;
 
   @override
   void initState() {
@@ -73,6 +75,7 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
       if (!mounted) return;
       setState(() {
         _fullNameController.text = fullName;
+        _landlordId = data?['landlord_id'] as String?;
         _isLoadingProfile = false;
       });
     } catch (_) {
@@ -255,6 +258,17 @@ class _ProfileCompletionScreenState extends State<ProfileCompletionScreen> {
           );
         }
         await batch.commit();
+
+        // Gửi thông báo cho admin
+        if (_landlordId != null && _landlordId!.isNotEmpty) {
+          await NotificationService().sendNotification(
+            title: 'Hồ sơ cần xác nhận',
+            message:
+                '${user.fullName} vừa hoàn thiện hồ sơ và cần được xác nhận.',
+            targetUserId: _landlordId,
+            metadata: {'tenantId': widget.userId, 'type': 'profile_update'},
+          );
+        }
       } catch (_) {
         // Firestore permission-denied — đã lưu local, tiếp tục
       }
