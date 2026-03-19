@@ -4,8 +4,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/message_model.dart';
 import '../../providers/chat_provider.dart';
+import '../../services/chat_service.dart';
 
-/// Màn hình chat dùng chung cho cả tenant và admin
+/// Dùng StreamBuilder trực tiếp — tránh shared-state conflict với ChatProvider.
 class ChatScreen extends StatefulWidget {
   final String chatRoomId;
   final String currentUserId;
@@ -27,17 +28,17 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+  final _chatService = ChatService();
 
   @override
   void initState() {
     super.initState();
+    // Mark as read khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<ChatProvider>();
-      provider.listenMessages(widget.chatRoomId);
-      provider.markAsRead(
-        chatRoomId: widget.chatRoomId,
-        isAdmin: widget.isAdmin,
-      );
+      context.read<ChatProvider>().markAsRead(
+            chatRoomId: widget.chatRoomId,
+            isAdmin: widget.isAdmin,
+          );
     });
   }
 
@@ -52,11 +53,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
     _msgCtrl.clear();
-    await context.read<ChatProvider>().sendMessage(
-          chatRoomId: widget.chatRoomId,
-          senderId: widget.currentUserId,
-          content: text,
-        );
+    await _chatService.sendMessage(
+      chatRoomId: widget.chatRoomId,
+      senderId: widget.currentUserId,
+      content: text,
+    );
     _scrollToBottom();
   }
 
@@ -81,10 +82,11 @@ class _ChatScreenState extends State<ChatScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(widget.otherUserName,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold)),
             const Text('Trực tuyến',
-                style: TextStyle(fontSize: 12, color: Colors.greenAccent)),
+                style:
+                    TextStyle(fontSize: 12, color: Colors.greenAccent)),
           ],
         ),
         backgroundColor: AppColors.primary,
@@ -100,27 +102,41 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildMessageList() {
-    return Consumer<ChatProvider>(
-      builder: (context, provider, _) {
-        final msgs = provider.messages;
+    return StreamBuilder<List<MessageModel>>(
+      stream: _chatService.streamMessages(widget.chatRoomId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Text('Lỗi: ${snapshot.error}',
+                style: const TextStyle(color: Colors.red)),
+          );
+        }
+        final msgs = snapshot.data ?? [];
         if (msgs.isEmpty) {
           return const Center(
-            child: Text('Chưa có tin nhắn nào.\nHãy bắt đầu cuộc trò chuyện!',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey)),
+            child: Text(
+              'Chưa có tin nhắn nào.\nHãy bắt đầu cuộc trò chuyện!',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey),
+            ),
           );
         }
         // Auto scroll khi có tin mới
-        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+        WidgetsBinding.instance
+            .addPostFrameCallback((_) => _scrollToBottom());
         return ListView.builder(
           controller: _scrollCtrl,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           itemCount: msgs.length,
           itemBuilder: (context, i) {
             final msg = msgs[i];
             final isMe = msg.senderId == widget.currentUserId;
-            final showDate = i == 0 ||
-                !_isSameDay(msgs[i - 1].sentAt, msg.sentAt);
+            final showDate =
+                i == 0 || !_isSameDay(msgs[i - 1].sentAt, msg.sentAt);
             return Column(
               children: [
                 if (showDate) _buildDateDivider(msg.sentAt),
@@ -153,9 +169,10 @@ class _ChatScreenState extends State<ChatScreen> {
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.72),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.72),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
           color: isMe ? AppColors.primary : Colors.white,
           borderRadius: BorderRadius.only(
@@ -225,8 +242,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   filled: true,
                   fillColor: AppColors.background,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 10),
                 ),
               ),
             ),
@@ -235,7 +252,8 @@ class _ChatScreenState extends State<ChatScreen> {
               backgroundColor: AppColors.primary,
               child: IconButton(
                 onPressed: _send,
-                icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                icon: const Icon(Icons.send,
+                    color: Colors.white, size: 20),
               ),
             ),
           ],
