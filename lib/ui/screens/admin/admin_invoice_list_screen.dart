@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../core/theme/app_colors.dart';
@@ -21,6 +22,8 @@ class _AdminInvoiceListScreenState extends State<AdminInvoiceListScreen>
 
   late TabController _tabController;
   List<InvoiceModel> _all = [];
+  Map<String, String> _roomNumbers = {};
+  Map<String, String> _tenantNames = {};
   bool _isLoading = true;
 
   int? _filterYear;
@@ -43,10 +46,32 @@ class _AdminInvoiceListScreenState extends State<AdminInvoiceListScreen>
   Future<void> _load() async {
     setState(() => _isLoading = true);
     final invoices = await _service.getInvoicesByLandlord(widget.landlordId);
+
+    // Resolve room numbers
+    final roomIds = invoices.map((i) => i.roomId).toSet();
+    final roomNumbers = <String, String>{};
+    for (final id in roomIds) {
+      if (id.isEmpty) continue;
+      final doc = await FirebaseFirestore.instance.collection('rooms').doc(id).get();
+      roomNumbers[id] = (doc.data()?['room_number'] as String? ?? id).trim();
+    }
+
+    // Resolve tenant names
+    final tenantIds = invoices.map((i) => i.tenantId).toSet();
+    final tenantNames = <String, String>{};
+    for (final id in tenantIds) {
+      if (id.isEmpty) continue;
+      final doc = await FirebaseFirestore.instance.collection('users').doc(id).get();
+      final name = (doc.data()?['full_name'] as String? ?? '').trim();
+      tenantNames[id] = name.isNotEmpty ? name : id;
+    }
+
     final years = invoices.map((i) => i.year).toSet().toList()
       ..sort((a, b) => b.compareTo(a));
     setState(() {
       _all = invoices;
+      _roomNumbers = roomNumbers;
+      _tenantNames = tenantNames;
       _availableYears = years;
       _filterYear ??= years.isNotEmpty ? years.first : null;
       _isLoading = false;
@@ -330,6 +355,8 @@ class _AdminInvoiceListScreenState extends State<AdminInvoiceListScreen>
 
   Widget _invoiceCard(InvoiceModel inv) {
     final color = _statusColor(inv.status);
+    final roomNumber = _roomNumbers[inv.roomId] ?? inv.roomId;
+    final tenantName = _tenantNames[inv.tenantId] ?? inv.tenantId;
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -342,6 +369,8 @@ class _AdminInvoiceListScreenState extends State<AdminInvoiceListScreen>
               builder: (_) => AdminInvoiceDetailScreen(
                 invoice: inv,
                 landlordId: widget.landlordId,
+                roomNumber: roomNumber,
+                tenantName: tenantName,
               ),
             ),
           );
@@ -376,15 +405,21 @@ class _AdminInvoiceListScreenState extends State<AdminInvoiceListScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Phòng ${inv.roomId}',
+                    Text('Phòng $roomNumber',
                         style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
                             color: AppColors.textDark)),
+                    const SizedBox(height: 2),
+                    Text(tenantName,
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey[600]),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 3),
                     Text(_fmt.format(inv.totalAmount),
                         style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: AppColors.primary)),
                     const SizedBox(height: 3),

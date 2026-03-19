@@ -64,7 +64,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       body: Consumer2<ChatProvider, NotificationProvider>(
         builder: (context, chatProvider, notifProvider, _) {
           final unreadChat = chatProvider.totalUnreadByAdmin;
-          final unreadNotif = notifProvider.unreadCount(widget.landlordId);
+          final unreadNotif = notifProvider.unreadReceivedCount(widget.landlordId);
           final features = [
             _FeatureItem(
               title: 'Quản lý tòa nhà',

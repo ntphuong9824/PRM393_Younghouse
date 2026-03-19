@@ -15,7 +15,15 @@ class NotificationProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  // Đếm thông báo chưa đọc: nhận trực tiếp (targetUserId == userId) HOẶC broadcast (targetUserId == null)
   int unreadCount(String userId) => _notifications
+      .where((n) =>
+          (n.targetUserId == userId || n.targetUserId == null) &&
+          !n.isReadBy(userId))
+      .length;
+
+  // Chỉ đếm thông báo nhận trực tiếp (dùng cho admin — loại bỏ broadcast mà admin tự gửi)
+  int unreadReceivedCount(String userId) => _notifications
       .where((n) => n.targetUserId == userId && !n.isReadBy(userId))
       .length;
 

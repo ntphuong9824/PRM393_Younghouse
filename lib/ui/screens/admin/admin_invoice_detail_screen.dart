@@ -7,11 +7,15 @@ import '../../../services/invoice_service.dart';
 class AdminInvoiceDetailScreen extends StatefulWidget {
   final InvoiceModel invoice;
   final String landlordId;
+  final String roomNumber;
+  final String tenantName;
 
   const AdminInvoiceDetailScreen({
     super.key,
     required this.invoice,
     required this.landlordId,
+    required this.roomNumber,
+    required this.tenantName,
   });
 
   @override
@@ -125,8 +129,8 @@ class _AdminInvoiceDetailScreenState extends State<AdminInvoiceDetailScreen> {
                       ],
                     ),
                     const Divider(height: 24),
-                    _row('Phòng', inv.roomId),
-                    _row('Tenant ID', inv.tenantId),
+                    _row('Phòng', widget.roomNumber),
+                    _row('Người thuê', widget.tenantName),
                     _row('Hạn thanh toán',
                         DateFormat('dd/MM/yyyy').format(inv.dueDate)),
                     if (inv.paidAt != null)
