@@ -111,7 +111,7 @@
 | co_tenants | Array\<String\> | Danh sách userId ở cùng |
 | terms | String | Điều khoản hợp đồng |
 | status | String | `active` / `expired` / `terminated` |
-| pdf_url | String | Link file PDF hợp đồng |
+| pdf_url | String | Link file PDF hoặc data URL (ảnh/PDF) lưu trực tiếp trên Firestore |
 | signed_at | Timestamp | |
 | terminated_at | Timestamp | nullable |
 | termination_reason | String | nullable |

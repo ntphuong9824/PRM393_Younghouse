@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../services/contract_service.dart';
@@ -20,7 +26,6 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = ContractService();
   final _termsController = TextEditingController();
-  final _pdfUrlController = TextEditingController();
 
   List<AdminRoomOption> _rooms = const [];
   List<AdminTenantOption> _tenants = const [];
@@ -30,6 +35,10 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
   String? _selectedTenantId;
   DateTime? _startDate;
   DateTime? _endDate;
+  String? _contractFileDataUrl;
+  String? _contractFileName;
+  String? _contractFileMimeType;
+  int? _contractFileSizeBytes;
   bool _isLoading = true;
   bool _isSaving = false;
 
@@ -44,8 +53,120 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
   @override
   void dispose() {
     _termsController.dispose();
-    _pdfUrlController.dispose();
     super.dispose();
+  }
+
+  String _guessMimeType(String fileName) {
+    final lower = fileName.toLowerCase();
+    if (lower.endsWith('.pdf')) return 'application/pdf';
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    return 'application/octet-stream';
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(2)} MB';
+  }
+
+  Future<void> _pickContractFile() async {
+    const maxBytes = 700 * 1024; // Firestore doc has size limit, keep attachment small.
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+        withData: true,
+      );
+    } catch (_) {
+      // Some environments fail to initialize FilePicker platform instance.
+      final fallback = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 70);
+      if (fallback == null) return;
+
+      final bytes = await File(fallback.path).readAsBytes();
+      if (bytes.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Khong doc duoc file da chon')),
+        );
+        return;
+      }
+      if (bytes.length > maxBytes) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File qua lon. Vui long chon file <= 700KB')),
+        );
+        return;
+      }
+
+      final fileName = fallback.name.trim().isEmpty ? 'contract_image.jpg' : fallback.name.trim();
+      final mimeType = _guessMimeType(fileName);
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+      setState(() {
+        _contractFileDataUrl = dataUrl;
+        _contractFileName = fileName;
+        _contractFileMimeType = mimeType;
+        _contractFileSizeBytes = bytes.length;
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thiet bi khong ho tro chon PDF. Da chuyen sang chon anh tu thu vien.')),
+      );
+      return;
+    }
+
+    if (result == null || result.files.isEmpty) return;
+
+    final picked = result.files.first;
+    Uint8List? bytes = picked.bytes;
+    if (bytes == null && picked.path != null) {
+      final file = File(picked.path!);
+      bytes = await file.readAsBytes();
+    }
+
+    if (bytes == null || bytes.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Khong doc duoc file da chon')),
+      );
+      return;
+    }
+
+    if (bytes.length > maxBytes) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('File qua lon. Vui long chon file <= 700KB')),
+      );
+      return;
+    }
+
+    final fileName = (picked.name).trim().isEmpty ? 'contract_file' : picked.name.trim();
+    final mimeType = _guessMimeType(fileName);
+    final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+
+    setState(() {
+      _contractFileDataUrl = dataUrl;
+      _contractFileName = fileName;
+      _contractFileMimeType = mimeType;
+      _contractFileSizeBytes = bytes!.length;
+    });
+  }
+
+  void _removeContractFile() {
+    setState(() {
+      _contractFileDataUrl = null;
+      _contractFileName = null;
+      _contractFileMimeType = null;
+      _contractFileSizeBytes = null;
+    });
   }
 
   Future<void> _loadInitialData() async {
@@ -137,7 +258,7 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
         endDate: _endDate!,
         terms: _termsController.text.trim(),
         coTenants: coTenants,
-        pdfUrl: _pdfUrlController.text.trim(),
+        pdfUrl: _contractFileDataUrl,
       );
 
       if (!mounted) return;
@@ -300,11 +421,54 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     const SizedBox(height: 14),
-                    TextFormField(
-                      controller: _pdfUrlController,
+                    InputDecorator(
                       decoration: const InputDecoration(
-                        labelText: 'PDF URL (tuy chon)',
+                        labelText: 'File hop dong (anh/PDF)',
                         border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.attach_file, color: AppColors.primary),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_contractFileName == null)
+                            const Text(
+                              'Chua co file duoc chon',
+                              style: TextStyle(color: Colors.grey),
+                            )
+                          else
+                            Text(
+                              '$_contractFileName (${_formatFileSize(_contractFileSizeBytes ?? 0)})',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                          if (_contractFileMimeType != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _contractFileMimeType!,
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            children: [
+                              OutlinedButton.icon(
+                                onPressed: _pickContractFile,
+                                icon: const Icon(Icons.upload_file),
+                                label: Text(_contractFileName == null ? 'Chon file' : 'Doi file'),
+                              ),
+                              if (_contractFileName != null)
+                                OutlinedButton.icon(
+                                  onPressed: _removeContractFile,
+                                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                                  label: const Text(
+                                    'Xoa file',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 18),
