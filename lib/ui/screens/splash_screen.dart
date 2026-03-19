@@ -1,6 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/auth_service.dart';
+import 'admin/admin_dashboard_screen.dart';
 import 'login_screen.dart';
+import 'profile_completion_screen.dart';
+import 'tenant/main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,15 +18,76 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    // Chuyển sang màn hình Đăng nhập sau 3 giây
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
+    Future.delayed(const Duration(seconds: 2), _checkSession);
+  }
+
+  Future<void> _checkSession() async {
+    if (!mounted) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _goLogin();
+      return;
+    }
+
+    try {
+      final authService = AuthService();
+      final profile = await authService.getOrCreateUserProfile(user);
+      final role = (profile['role'] as String?) ?? 'tenant';
+      final fullName = (profile['full_name'] as String?)?.trim();
+
+      if (!mounted) return;
+
+      if (role == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          MaterialPageRoute(
+            builder: (_) => AdminDashboardScreen(landlordId: user.uid),
+          ),
         );
+      } else {
+        final isComplete = await authService.isTenantProfileComplete(
+          userId: user.uid,
+          profile: profile,
+        );
+        if (!mounted) return;
+
+        if (!isComplete) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ProfileCompletionScreen(
+                userId: user.uid,
+                phone: (profile['phone'] as String?) ?? (user.phoneNumber ?? ''),
+                initialFullName: fullName,
+              ),
+            ),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MainScreen(
+                userId: user.uid,
+                userName: (fullName == null || fullName.isEmpty)
+                    ? (user.email ?? user.phoneNumber ?? 'Người dùng')
+                    : fullName,
+              ),
+            ),
+          );
+        }
       }
-    });
+    } catch (_) {
+      _goLogin();
+    }
+  }
+
+  void _goLogin() {
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
   }
 
   @override
