@@ -11,6 +11,7 @@ import '../../../models/invoice_service_model.dart';
 import '../../../models/room_service_model.dart';
 import '../../../services/contract_service.dart';
 import '../../../services/invoice_service.dart';
+import '../../../services/notification_service.dart';
 
 class AdminCreateInvoiceScreen extends StatefulWidget {
   final String landlordId;
@@ -29,6 +30,7 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _contractService = ContractService();
   final _invoiceService = InvoiceService();
+  final _notificationService = NotificationService();
   final _db = FirebaseFirestore.instance;
 
   final _rentCtrl = TextEditingController();
@@ -254,6 +256,32 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
     setState(() => _dueDate = picked);
   }
 
+  Future<void> _sendInvoiceNotifications(
+    ContractModel contract,
+    String invoiceId,
+  ) async {
+    final room = _roomDisplayById[contract.roomId] ?? contract.roomId;
+    final title = 'Hoá đơn tháng $_month/$_year';
+    final message =
+        'Hoá đơn phòng $room tháng $_month/$_year đã được tạo. '
+        'Tổng tiền: ${NumberFormat.currency(locale: 'vi_VN', symbol: 'VND ').format(_totalAmount)}. '
+        'Hạn thanh toán: ${DateFormat('dd/MM/yyyy').format(_dueDate)}.';
+
+    final recipients = [contract.tenantId, ...contract.coTenants]
+        .where((id) => id.isNotEmpty)
+        .toSet();
+
+    await Future.wait(
+      recipients.map(
+        (userId) => _notificationService.sendNotification(
+          title: title,
+          message: message,
+          targetUserId: userId,
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -387,6 +415,9 @@ class _AdminCreateInvoiceScreenState extends State<AdminCreateInvoiceScreen> {
       );
 
       await _invoiceService.createInvoiceWithServices(invoice, details);
+
+      // Gửi thông báo cho tenant và co-tenants
+      await _sendInvoiceNotifications(contract, invoice.id);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
