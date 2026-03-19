@@ -789,6 +789,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.2.0"
+  vietnam_provinces:
+    dependency: "direct main"
+    description:
+      name: vietnam_provinces
+      sha256: "9462e388315f9780312086ec0a66c06f9dffd65cf02745159abdac3b2d35f4d1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.2"
   vm_service:
     dependency: transitive
     description:

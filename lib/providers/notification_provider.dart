@@ -56,6 +56,10 @@ class NotificationProvider extends ChangeNotifier {
     );
   }
 
+  Future<void> deleteNotification(String notificationId) async {
+    await _service.deleteNotification(notificationId);
+  }
+
   @override
   void dispose() {
     _subscription?.cancel();

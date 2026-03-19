@@ -245,6 +245,17 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<void> confirmUserProfile(String userId) async {
+    await _db.collection('users').doc(userId).update({
+      'is_profile_confirmed': true,
+      'updated_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteUserProfile(String userId) async {
+    await _db.collection('users').doc(userId).delete();
+  }
+
   /// Lấy UID của admin (user có role = 'admin') từ Firestore
   Future<String?> getAdminUid() async {
     final snap = await _db

@@ -411,15 +411,33 @@ class _AdminCreateContractScreenState extends State<AdminCreateContractScreen> {
                       },
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      _selectedCoTenantIds.isEmpty
-                          ? 'Chưa chọn co-tenant'
-                          : _tenants
-                              .where((t) => _selectedCoTenantIds.contains(t.id))
-                              .map((t) => t.displayLabel)
-                              .join(', '),
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
+                    if (_selectedCoTenantIds.isEmpty)
+                      const Text(
+                        'Chưa chọn co-tenant',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      )
+                    else
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: _tenants
+                            .where((t) => _selectedCoTenantIds.contains(t.id))
+                            .map((t) => Chip(
+                                  label: Text(t.displayLabel,
+                                      style: const TextStyle(fontSize: 13)),
+                                  avatar: const Icon(Icons.person,
+                                      size: 16, color: AppColors.primary),
+                                  backgroundColor:
+                                      AppColors.primary.withOpacity(0.08),
+                                  side: BorderSide(
+                                      color:
+                                          AppColors.primary.withOpacity(0.3)),
+                                  deleteIcon: const Icon(Icons.close, size: 16),
+                                  onDeleted: () => setState(
+                                      () => _selectedCoTenantIds.remove(t.id)),
+                                ))
+                            .toList(),
+                      ),
                     const SizedBox(height: 14),
                     InputDecorator(
                       decoration: const InputDecoration(

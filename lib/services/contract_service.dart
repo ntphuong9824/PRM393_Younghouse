@@ -333,6 +333,10 @@ class ContractService {
     return contractRef.id;
   }
 
+  Future<void> deleteContract(String contractId) async {
+    await _db.collection('contracts').doc(contractId).delete();
+  }
+
   Future<void> terminateContractTransactional({
     required String contractId,
     required String landlordId,

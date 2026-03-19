@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/property_model.dart';
 import '../models/room_model.dart';
+import '../models/room_service_model.dart';
 import '../core/interfaces/i_property_service.dart';
 import 'local_db_service.dart';
 
@@ -76,6 +77,54 @@ class PropertyService implements IPropertyService {
   Future<void> deleteRoom(String roomId) async {
     await _local.delete('rooms', roomId);
     await _db.collection('rooms').doc(roomId).delete();
+  }
+
+  // ── ROOM SERVICES ─────────────────────────────────────────────
+
+  Future<List<RoomServiceModel>> getRoomServices(String roomId) async {
+    final rows = await _local.getAll('room_services',
+        where: 'room_id = ?', whereArgs: [roomId]);
+    if (rows.isNotEmpty) {
+      return rows.map((r) => RoomServiceModel.fromSqlite(r)).toList();
+    }
+    final snap = await _db
+        .collection('room_services')
+        .where('room_id', isEqualTo: roomId)
+        .get();
+    final list = snap.docs.map(RoomServiceModel.fromFirestore).toList();
+    for (final s in list) {
+      await _local.upsert('room_services', s.toSqlite());
+    }
+    return list;
+  }
+
+  Future<void> saveRoomServices(
+      String roomId, List<RoomServiceModel> services) async {
+    // Xoá cũ
+    final oldRows = await _local.getAll('room_services',
+        where: 'room_id = ?', whereArgs: [roomId]);
+    for (final row in oldRows) {
+      await _local.delete('room_services', row['id'] as String);
+    }
+    final oldSnap = await _db
+        .collection('room_services')
+        .where('room_id', isEqualTo: roomId)
+        .get();
+    final batch = _db.batch();
+    for (final doc in oldSnap.docs) {
+      batch.delete(doc.reference);
+    }
+    // Lưu mới
+    for (final s in services) {
+      final map = s.toSqlite();
+      map['is_synced'] = 0;
+      await _local.upsert('room_services', map);
+      batch.set(_db.collection('room_services').doc(s.id), s.toFirestore());
+    }
+    await batch.commit();
+    for (final s in services) {
+      await _local.markSynced('room_services', s.id);
+    }
   }
 
   // ── UPLOAD ẢNH ────────────────────────────────────────────────

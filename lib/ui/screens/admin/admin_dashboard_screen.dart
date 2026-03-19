@@ -92,8 +92,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               )),
             ),
             _FeatureItem(
-              title: 'Nguoi dung',
-              subtitle: 'Danh sach va tao tai khoan',
+              title: 'Người dùng',
+              subtitle: 'Danh sách và tạo tài khoản',
               icon: Icons.people,
               color: Colors.indigo,
               onTap: () => Navigator.push(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/property_model.dart';
 import '../models/room_model.dart';
+import '../models/room_service_model.dart';
 import '../services/property_service.dart';
 
 class PropertyProvider extends ChangeNotifier {
@@ -100,6 +101,7 @@ class PropertyProvider extends ChangeNotifier {
     required double depositAmount,
     String? description,
     List<File> imageFiles = const [],
+    List<RoomServiceModel> services = const [],
   }) async {
     isLoading = true;
     notifyListeners();
@@ -125,6 +127,21 @@ class PropertyProvider extends ChangeNotifier {
         updatedAt: now,
       );
       await _service.saveRoom(room);
+      if (services.isNotEmpty) {
+        final linked = services
+            .map((s) => RoomServiceModel(
+                  id: s.id,
+                  roomId: roomId,
+                  serviceName: s.serviceName,
+                  unit: s.unit,
+                  pricePerUnit: s.pricePerUnit,
+                  isMetered: s.isMetered,
+                  createdAt: now,
+                  updatedAt: now,
+                ))
+            .toList();
+        await _service.saveRoomServices(roomId, linked);
+      }
       // Cập nhật totalRooms trên property
       final prop = _properties.firstWhere((p) => p.id == propertyId,
           orElse: () => throw Exception('Property not found'));
@@ -138,7 +155,9 @@ class PropertyProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> updateRoom(RoomModel room, {List<File> newImages = const []}) async {
+  Future<void> updateRoom(RoomModel room,
+      {List<File> newImages = const [],
+      List<RoomServiceModel>? services}) async {
     isLoading = true;
     notifyListeners();
     try {
@@ -151,10 +170,17 @@ class PropertyProvider extends ChangeNotifier {
         images: imageUrls,
         updatedAt: DateTime.now(),
       ));
+      if (services != null) {
+        await _service.saveRoomServices(room.id, services);
+      }
     } finally {
       isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<List<RoomServiceModel>> getRoomServices(String roomId) async {
+    return _service.getRoomServices(roomId);
   }
 
   Future<void> deleteRoom(String roomId, String propertyId) async {
